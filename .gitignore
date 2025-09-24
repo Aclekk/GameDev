@@ -2,7 +2,18 @@
 #
 # Get latest from https://github.com/github/gitignore/blob/main/Unity.gitignore
 #
-.utmp/
+# Unity-specific ignores for nested GameDev folder
+GameDev/[Ll]ibrary/
+GameDev/[Tt]emp/
+GameDev/[Oo]bj/
+GameDev/[Bb]uild/
+GameDev/[Bb]uilds/
+GameDev/[Ll]ogs/
+GameDev/[Uu]ser[Ss]ettings/
+GameDev/[Mm]emoryCaptures/
+GameDev/[Rr]ecordings/
+
+# Also keep the original patterns for root level
 /[Ll]ibrary/
 /[Tt]emp/
 /[Oo]bj/
@@ -10,7 +21,6 @@
 /[Bb]uilds/
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
-*.log
 
 # By default unity supports Blender asset imports, *.blend1 blender files do not need to be commited to version control.
 *.blend1
