@@ -19,7 +19,7 @@ MonoBehaviour:
     width: 1280
     height: 677.3334
   m_ShowMode: 4
-  m_Title: Inspector
+  m_Title: Hierarchy
   m_RootView: {fileID: 6}
   m_MinSize: {x: 875, y: 300}
   m_MaxSize: {x: 10000, y: 10000}
@@ -48,7 +48,7 @@ MonoBehaviour:
   m_MinSize: {x: 679, y: 492}
   m_MaxSize: {x: 14002, y: 14042}
   vertical: 0
-  controlID: 37
+  controlID: 97
   draggingID: 0
 --- !u!114 &3
 MonoBehaviour:
@@ -334,7 +334,7 @@ MonoBehaviour:
   m_LastFolders:
   - Assets
   m_LastFoldersGridSize: -1
-  m_LastProjectPath: C:\Users\ziyad\GAMEDEV\GameDev\GameDev
+  m_LastProjectPath: C:\Users\ziyad\Downloads\folderlatihan\GameDev\GameDev
   m_LockTracker:
     m_IsLocked: 0
   m_FolderTreeState:
@@ -509,9 +509,9 @@ MonoBehaviour:
   m_SceneHierarchy:
     m_TreeViewState:
       scrollPos: {x: 0, y: 0}
-      m_SelectedIDs: 4a24ffff
-      m_LastClickedID: -56246
-      m_ExpandedIDs: 4e28ffff
+      m_SelectedIDs: 4027ffff
+      m_LastClickedID: -55488
+      m_ExpandedIDs: 4228ffff
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
