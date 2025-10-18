@@ -19,7 +19,7 @@ public class HantuMove : MonoBehaviour
     public PathMode pathMode = PathMode.HierarchyOrder;
     public bool loop = true;
     public float waitAtPoint = 0.2f;
-    public float waypointTolerance = 0.6f;    // dibuat sedikit besar supaya pasti "nyampe"
+    public float waypointTolerance = 0.6f;
 
     [Header("Kecepatan")]
     public float patrolSpeed = 1.2f;
@@ -37,24 +37,26 @@ public class HantuMove : MonoBehaviour
     public float audioFadeSpeed = 6f;
     [Range(0f, 1f)] public float audioMaxVolume = 0.9f;
 
+    // --- runtime ---
     private int _index;
     private float _waitTimer;
     private State _state = State.Patrol;
     private Vector3 _lastMoveDir;
+    private bool _movedThisFrame;
+    private const float _eps = 0.0001f;
+
+    // --- untuk blokir audio saat jumpscare/keadaan khusus ---
+    [SerializeField] private bool _suppressAudio = false;
 
     void Awake()
     {
-        // Cari parent bila kosong
         if (waypointsParent == null)
         {
             var mp = GameObject.Find("Movepoint");
             if (mp) waypointsParent = mp.transform;
         }
-
-        // Bangun rute otomatis sekali di awal
         BuildWaypointRoute();
 
-        // Setup audio 3D
         if (audioSource)
         {
             audioSource.clip = crawlClip;
@@ -69,6 +71,12 @@ public class HantuMove : MonoBehaviour
         }
     }
 
+    void OnDisable()
+    {
+        // kalau script dimatikan, hentikan suara supaya tidak terus bunyi
+        ForceStopFootstepAudio();
+    }
+
     // --- ROUTE BUILDER ---
     void BuildWaypointRoute()
     {
@@ -80,15 +88,13 @@ public class HantuMove : MonoBehaviour
 
         if (pathMode == PathMode.HierarchyOrder)
         {
-            // Urut sesuai urutan child di Hierarchy (tanpa perlu rename)
             var list = new List<Transform>();
             for (int i = 0; i < waypointsParent.childCount; i++)
                 list.Add(waypointsParent.GetChild(i));
             waypoints = list.ToArray();
         }
-        else // NearestChain
+        else
         {
-            // Mulai dari child terdekat dengan posisi Hantu, lalu sambung ke tetangga terdekat yang belum dikunjungi
             var all = new List<Transform>();
             for (int i = 0; i < waypointsParent.childCount; i++)
                 all.Add(waypointsParent.GetChild(i));
@@ -107,12 +113,14 @@ public class HantuMove : MonoBehaviour
             waypoints = route.ToArray();
         }
 
-        _index = 0;          // mulai dari titik pertama rute
+        _index = 0;
         _waitTimer = 0f;
     }
 
     void Update()
     {
+        _movedThisFrame = false; // reset flag di awal frame
+
         float distToPlayer = player ? Vector3.Distance(transform.position, player.position) : Mathf.Infinity;
 
         switch (_state)
@@ -121,13 +129,14 @@ public class HantuMove : MonoBehaviour
                 if (distToPlayer <= detectionRadius) _state = State.Chase;
                 PatrolOnly();
                 break;
+
             case State.Chase:
                 if (distToPlayer > detectionRadius * loseRadiusMultiplier) _state = State.Patrol;
                 ChasePlayer();
                 break;
         }
 
-        bool isMoving = _lastMoveDir.sqrMagnitude > 0.0001f;
+        bool isMoving = _movedThisFrame;
         if (animator) animator.SetBool("isCrawl", isMoving);
         UpdateFootstepAudio(isMoving, distToPlayer);
     }
@@ -137,20 +146,27 @@ public class HantuMove : MonoBehaviour
         if (waypoints == null || waypoints.Length == 0) return;
 
         Transform target = waypoints[Mathf.Clamp(_index, 0, waypoints.Length - 1)];
-        MoveTowards(target.position, patrolSpeed * speedMultiplier);
+        float dist = Vector3.Distance(Flat(transform.position), Flat(target.position));
 
-        if (Vector3.Distance(Flat(transform.position), Flat(target.position)) <= waypointTolerance)
+        // Sudah sampai → JEDA (TIDAK memanggil MoveTowards!)
+        if (dist <= waypointTolerance)
         {
+            _lastMoveDir = Vector3.zero;
+            _movedThisFrame = false;
+
             _waitTimer += Time.deltaTime;
             if (_waitTimer >= waitAtPoint)
             {
                 _waitTimer = 0f;
                 _index++;
                 if (_index >= waypoints.Length)
-                    _index = loop ? 0 : waypoints.Length - 1; // kalau tidak loop, berhenti di terakhir
+                    _index = loop ? 0 : waypoints.Length - 1;
             }
+            return;
         }
-        else _waitTimer = 0f;
+
+        // Belum sampai → bergerak
+        MoveTowards(target.position, patrolSpeed * speedMultiplier);
     }
 
     void ChasePlayer()
@@ -162,46 +178,71 @@ public class HantuMove : MonoBehaviour
     void MoveTowards(Vector3 targetPos, float speed)
     {
         Vector3 to = targetPos - transform.position;
-        to.y = 0f; // jaga tetap di lantai
+        to.y = 0f;
         Vector3 dir = to.normalized;
 
-        if (dir.sqrMagnitude > 0.0001f)
+        if (dir.sqrMagnitude > _eps)
         {
             Quaternion look = Quaternion.LookRotation(dir, Vector3.up);
             transform.rotation = Quaternion.Slerp(transform.rotation, look, rotateSpeed * Time.deltaTime);
         }
 
         Vector3 delta = dir * speed * Time.deltaTime;
-        transform.position += delta;
-        _lastMoveDir = delta;
+
+        if (delta.sqrMagnitude > _eps)
+        {
+            transform.position += delta;
+            _lastMoveDir = delta;
+            _movedThisFrame = true;              // bergerak
+        }
+        else
+        {
+            _lastMoveDir = Vector3.zero;
+        }
     }
 
-    // --- AUDIO dekat saja + fade ---
+    // --- AUDIO: play hanya saat bergerak, stop saat diam; hormati suppress ---
     void UpdateFootstepAudio(bool isMoving, float distToPlayer)
     {
         if (!audioSource || crawlClip == null) return;
 
-        float targetVol = 0f;
-        if (isMoving && distToPlayer <= audioMaxDistance)
+        // Saat suppress (mis. jumpscare), paksa diam
+        if (_suppressAudio)
         {
-            if (distToPlayer <= audioTriggerRadius) targetVol = audioMaxVolume;
-            else
-            {
-                float t = Mathf.InverseLerp(audioMaxDistance, audioTriggerRadius, distToPlayer);
-                targetVol = Mathf.Lerp(0f, audioMaxVolume, t);
-            }
+            ForceStopFootstepAudio();
+            return;
         }
+
+        if (!isMoving || distToPlayer > audioMaxDistance)
+        {
+            if (audioSource.isPlaying) audioSource.Stop();
+            audioSource.volume = 0f;
+            return;
+        }
+
+        float targetVol = (distToPlayer <= audioTriggerRadius)
+            ? audioMaxVolume
+            : Mathf.Lerp(0f, audioMaxVolume,
+                Mathf.InverseLerp(audioMaxDistance, audioTriggerRadius, distToPlayer));
 
         audioSource.volume = Mathf.MoveTowards(audioSource.volume, targetVol, audioFadeSpeed * Time.deltaTime);
 
-        if (audioSource.volume > 0.01f)
-        {
-            if (!audioSource.isPlaying) audioSource.Play();
-        }
-        else
-        {
-            if (audioSource.isPlaying) audioSource.Stop();
-        }
+        if (!audioSource.isPlaying && audioSource.volume > 0.01f)
+            audioSource.Play();
+    }
+
+    // --- API utk skrip lain (mis. HantuJumpscare) ---
+    public void SuppressCrawlAudio(bool on)
+    {
+        _suppressAudio = on;
+        if (on) ForceStopFootstepAudio();
+    }
+
+    public void ForceStopFootstepAudio()
+    {
+        if (!audioSource) return;
+        if (audioSource.isPlaying) audioSource.Stop();
+        audioSource.volume = 0f;
     }
 
     Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);

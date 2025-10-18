@@ -5,35 +5,39 @@ using UnityEngine.SceneManagement;
 public class HantuJumpscare : MonoBehaviour
 {
     [Header("Refs (auto-isi kalau kosong)")]
-    public Transform player;                       // root "Player"
-    public Camera playerCamera;                    // child "PlayerCamera"
-    public Animator enemyAnimator;                 // Trigger "Jumpscare"
-    public MonoBehaviour enemyMovementToDisable;   // mis. HantuMove
-    public MonoBehaviour playerControllerToDisable;// mis. FirstPersonController/HeroController
-    public MonoBehaviour[] extraPlayerScriptsToDisable; // opsional: sway/headbob dsb.
+    public Transform player;                        // root "Player"
+    public Camera playerCamera;                     // child "PlayerCamera"
+    public Animator enemyAnimator;                  // Trigger "Jumpscare"
+    public MonoBehaviour enemyMovementToDisable;    // mis. HantuMove
+    public MonoBehaviour playerControllerToDisable; // mis. FirstPersonController/HeroController
+    public MonoBehaviour[] extraPlayerScriptsToDisable; // opsional: sway/headbob dll.
 
     [Header("Trigger & Kamera")]
-    public float triggerRadius   = 2.2f;   // jarak memicu jumpscare
-    public float camApproach     = 0.65f;  // jarak kamera di DEPAN hantu
-    public float camHeight       = 1.6f;   // tinggi kepala hantu
-    public bool  instantSnap     = true;   // true = langsung snap, false = lerp cepat
-    public float camLerpTime     = 0.12f;  // dipakai kalau instantSnap=false
-    public float jumpscareDuration = 1.8f; // tunggu sebelum game over
+    public float triggerRadius = 2.2f;    // jarak memicu jumpscare
+    public float camApproach   = 0.65f;   // jarak kamera di DEPAN hantu
+    public float camHeight     = 1.6f;    // tinggi kepala hantu
+    public bool  instantSnap   = true;    // true=langsung snap, false=lerp
+    public float camLerpTime   = 0.12f;   // dipakai kalau instantSnap=false
+    public float jumpscareDuration = 1.8f;
 
-    [Header("SFX (opsional)")]
-    public AudioSource audioSource;
-    public AudioClip jumpscareSfx;
+    [Header("SFX Jumpscare")]
+    public AudioSource audioSource;       // dedicated untuk SFX jumpscare
+    public AudioClip jumpscareSfxA;       // slot 1
+    public AudioClip jumpscareSfxB;       // slot 2
+    [Range(0f,1f)] public float jumpscareVolume = 1f;  // kontrol volume 0–1
+    public bool playBothSfx = false;      // true: mainkan A lalu B
+    public bool randomizeIfSingle = true; // kalau false: prioritas A; kalau true: acak A/B
+    public float sfxBDelay = 0.0f;        // jeda mainkan B sesudah A (kalau playBothSfx)
 
     [Header("UI Kalah")]
-    public GameObject loseCanvas;          // Canvas "LoseCanvas" (awal: inactive)
+    public GameObject loseCanvas;         // Canvas "LoseCanvas" (awal: inactive)
     public bool pauseTimeOnLose = true;
     public bool fadeLoseUI = true;
     public float fadeTime = 0.35f;
     public string mainMenuSceneName = "MainMenu";
 
+    // --- runtime ---
     bool done;
-
-    // cache utk unfreeze jika perlu (sini tidak dipakai lagi karena game over)
     Rigidbody playerRb;
     CharacterController playerCc;
     Transform camOriginalParent;
@@ -47,7 +51,7 @@ public class HantuJumpscare : MonoBehaviour
             if (pc) playerCamera = pc;
         }
         if (enemyAnimator == null) enemyAnimator = GetComponentInChildren<Animator>();
-        if (audioSource == null) audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)   audioSource   = GetComponent<AudioSource>();
         if (enemyMovementToDisable == null)
         {
             var hm = GetComponent("HantuMove") as MonoBehaviour;
@@ -74,7 +78,6 @@ public class HantuJumpscare : MonoBehaviour
     {
         if (done || player == null || playerCamera == null) return;
 
-        // Jarak simple – kalau mau super akurat bisa ganti ke SphereCollider isTrigger
         if (Vector3.Distance(transform.position, player.position) <= triggerRadius)
             StartCoroutine(DoJumpscare());
     }
@@ -83,47 +86,51 @@ public class HantuJumpscare : MonoBehaviour
     {
         done = true;
 
-        // 1) HENTIKAN semua gerak lebih dulu (biar nggak “kelewatan”)
+        // 1) STOP gerak dulu
         if (enemyMovementToDisable) enemyMovementToDisable.enabled = false;
-
         if (playerControllerToDisable) playerControllerToDisable.enabled = false;
         if (extraPlayerScriptsToDisable != null)
             foreach (var s in extraPlayerScriptsToDisable) if (s) s.enabled = false;
 
-        // freeze fisika player
         if (playerRb)
         {
             playerRb.velocity = Vector3.zero;
             playerRb.angularVelocity = Vector3.zero;
-            playerRb.isKinematic = true; // stop total
+            playerRb.isKinematic = true;
         }
-        if (playerCc) playerCc.enabled = false; // stop CharacterController step berikutnya
+        if (playerCc) playerCc.enabled = false;
 
-        // 2) ANIM + SFX
-        if (enemyAnimator) enemyAnimator.SetTrigger("Jumpscare");
-        if (audioSource && jumpscareSfx)
+        // 1b) Matikan semua suara crawl dari musuh (supaya tidak overlap)
+        var hm = GetComponent<HantuMove>();
+        if (hm != null) hm.SuppressCrawlAudio(true);  // tersedia di HantuMove patch
+        foreach (var asrc in GetComponentsInChildren<AudioSource>())
         {
-            audioSource.spatialBlend = 1f;
-            audioSource.dopplerLevel = 0f;
-            audioSource.PlayOneShot(jumpscareSfx);
+            if (audioSource != null && asrc == audioSource) continue;
+            if (asrc.isPlaying) asrc.Stop();
+            asrc.volume = 0f;
         }
+        if (enemyAnimator) enemyAnimator.SetBool("isCrawl", false);
 
-        // 3) KAMERA: SNAP / LERP ke DEPAN hantu lalu LOCK
+        // 2) ANIM
+        if (enemyAnimator) enemyAnimator.SetTrigger("Jumpscare");
+
+        // 2b) SFX jumpscare (dengan kontrol volume & dua slot)
+        PlayJumpscareSfx();
+
+        // 3) KAMERA: SNAP/LOCK di depan hantu
         var camT = playerCamera.transform;
-        camOriginalParent = camT.parent; // simpan
+        camOriginalParent = camT.parent;
         Vector3 head = transform.position + Vector3.up * camHeight;
         Vector3 targetPos = transform.position + transform.forward * camApproach + Vector3.up * camHeight;
         Quaternion targetRot = Quaternion.LookRotation((head - targetPos).normalized, Vector3.up);
 
         if (instantSnap || camLerpTime <= 0.01f)
         {
-            camT.position = targetPos;
-            camT.rotation = targetRot;
+            camT.position = targetPos; camT.rotation = targetRot;
         }
         else
         {
-            Vector3 startPos = camT.position;
-            Quaternion startRot = camT.rotation;
+            Vector3 startPos = camT.position; Quaternion startRot = camT.rotation;
             float t = 0f;
             while (t < camLerpTime)
             {
@@ -133,11 +140,8 @@ public class HantuJumpscare : MonoBehaviour
                 camT.rotation = Quaternion.Slerp(startRot, targetRot, k);
                 yield return null;
             }
-            camT.position = targetPos;
-            camT.rotation = targetRot;
+            camT.position = targetPos; camT.rotation = targetRot;
         }
-
-        // Parent-kan kamera ke hantu supaya 100% “nempel” & menghadap dia
         camT.SetParent(transform, true);
 
         // 4) Tunggu durasi jumpscare
@@ -145,9 +149,53 @@ public class HantuJumpscare : MonoBehaviour
 
         // 5) GAME OVER
         ShowLoseUI();
-
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+    }
+
+    // --- SFX helper: dua slot + volume 0-1 ---
+    void PlayJumpscareSfx()
+    {
+        if (audioSource == null) return;
+
+        // Pastikan setingan 3D & tidak ikut pause global
+        audioSource.spatialBlend = 1f;
+        audioSource.dopplerLevel = 0f;
+        audioSource.ignoreListenerPause = true; // tetap bunyi walau nanti Time.timeScale=0
+        audioSource.volume = 1f; // volume base source; gunakan volumeScale per OneShot
+
+        if (playBothSfx)
+        {
+            if (jumpscareSfxA) audioSource.PlayOneShot(jumpscareSfxA, Mathf.Clamp01(jumpscareVolume));
+            if (jumpscareSfxB)
+            {
+                if (sfxBDelay <= 0f)
+                    audioSource.PlayOneShot(jumpscareSfxB, Mathf.Clamp01(jumpscareVolume));
+                else
+                    StartCoroutine(PlayDelayed(jumpscareSfxB, Mathf.Clamp01(jumpscareVolume), sfxBDelay));
+            }
+        }
+        else
+        {
+            AudioClip chosen = null;
+            if (randomizeIfSingle)
+            {
+                bool pickA = (jumpscareSfxA && jumpscareSfxB) ? (Random.value < 0.5f) : true;
+                chosen = pickA ? (jumpscareSfxA ?? jumpscareSfxB) : (jumpscareSfxB ?? jumpscareSfxA);
+            }
+            else
+            {
+                chosen = jumpscareSfxA ? jumpscareSfxA : jumpscareSfxB;
+            }
+
+            if (chosen) audioSource.PlayOneShot(chosen, Mathf.Clamp01(jumpscareVolume));
+        }
+    }
+
+    IEnumerator PlayDelayed(AudioClip clip, float vol, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (audioSource) audioSource.PlayOneShot(clip, vol);
     }
 
     void ShowLoseUI()
@@ -185,7 +233,7 @@ public class HantuJumpscare : MonoBehaviour
     public void UI_Retry()
     {
         Time.timeScale = 1f;
-        Scene cur = SceneManager.GetActiveScene();
+        var cur = SceneManager.GetActiveScene();
         SceneManager.LoadScene(cur.buildIndex);
     }
 
