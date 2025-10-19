@@ -57795,14 +57795,10 @@ MonoBehaviour:
   needKeyText: {fileID: 1527193720}
   winCanvas: {fileID: 1463208822}
   player: {fileID: 6538425592607266028}
-  playerCamera: {fileID: 4071128928292853172}
+  playerCamera: {fileID: 0}
   playerControllerToDisable: {fileID: 384876577}
   interactRadius: 3
   interactKey: 101
-  enableCameraSnap: 0
-  camApproach: 0.65
-  camHeight: 1.6
-  camLerpTime: 2
   winDelay: 1
 --- !u!65 &1887330711
 BoxCollider:
@@ -61260,10 +61256,6 @@ MonoBehaviour:
   needKeyText: {fileID: 0}
   winCanvas: {fileID: 0}
   playerControllerToDisable: {fileID: 0}
-  camApproach: 0.65
-  camHeight: 1.6
-  instantSnap: 1
-  camLerpTime: 0.12
   winDelay: 0.8
 --- !u!95 &5866666021783533147
 Animator:

@@ -10,42 +10,18 @@ public class EscapeDoor : MonoBehaviour
 
     [Header("Player Refs")]
     public Transform player;            // drag Player (root)
-    public Camera playerCamera;         // drag PlayerCamera (hanya untuk jarak)
+    public Camera playerCamera;         // drag PlayerCamera (dipakai untuk jarak)
     public MonoBehaviour playerControllerToDisable; // drag controller player (FPC/HeroController)
 
     [Header("Interact")]
-    public float interactRadius = 2.0f; // radius tekan E (horizontal, biar gak sensi tinggi)
+    public float interactRadius = 2.0f; // radius tekan E (horizontal)
     public KeyCode interactKey = KeyCode.E;
     public float winDelay = 0.8f;       // jeda sebelum WinCanvas
 
     // runtime
     Inventory inventory;
-    Rigidbody playerRb;
-    CharacterController playerCc;
     bool done;
     Coroutine needKeyCo;
-
-    // Kunci: EscapeDoor tidak boleh animasi/rotasi (pintu lain tetap normal)
-    Quaternion initialLocalRot;
-    DoorScript.Door doorComp;
-
-    void Awake()
-    {
-        // Matikan anim pintu HANYA untuk EscapeDoor ini
-        initialLocalRot = transform.localRotation;
-        doorComp = GetComponent<DoorScript.Door>();
-        if (doorComp)
-        {
-            doorComp.open = false;
-            doorComp.enabled = false;
-        }
-    }
-
-    void LateUpdate()
-    {
-        // pastikan EscapeDoor ini tidak berputar dari skrip lain
-        transform.localRotation = initialLocalRot;
-    }
 
     void Start()
     {
@@ -64,9 +40,6 @@ public class EscapeDoor : MonoBehaviour
             Debug.LogError("[EscapeDoor] Inventory tidak ditemukan di Player.");
             enabled = false; return;
         }
-
-        playerRb = player.GetComponent<Rigidbody>();
-        playerCc = player.GetComponent<CharacterController>();
 
         if (winCanvas && winCanvas.activeSelf) winCanvas.SetActive(false);
         if (needKeyText) needKeyText.SetActive(false);
@@ -90,7 +63,7 @@ public class EscapeDoor : MonoBehaviour
                 StartCoroutine(WinSequence_FreezeOnly());
             }
         }
-        // Catatan: tidak auto-hide needKeyText saat keluar radius (coroutine yang ngatur).
+        // Tidak ada auto-hide saat keluar radius — durasi diatur coroutine.
     }
 
     IEnumerator ShowNeedKey()
@@ -106,21 +79,9 @@ public class EscapeDoor : MonoBehaviour
     {
         done = true;
 
-        // 0) Matikan HantuJumpscare biar TIDAK ada skrip lain yang narik kamera
-        var jumps = FindObjectsOfType<HantuJumpscare>(includeInactive: true);
-        foreach (var j in jumps) j.enabled = false;
-
-        // 1) Freeze player (tanpa sentuh kamera sama sekali)
+        // Freeze kontrol player (tanpa sentuh kamera / rigidbody / transform apa pun)
         if (playerControllerToDisable) playerControllerToDisable.enabled = false;
-        if (playerRb)
-        {
-            playerRb.velocity = Vector3.zero;
-            playerRb.angularVelocity = Vector3.zero;
-            playerRb.isKinematic = true;
-        }
-        if (playerCc) playerCc.enabled = false;
 
-        // 2) Tunggu lalu tampilkan Win UI
         yield return new WaitForSeconds(winDelay);
 
         if (winCanvas)
