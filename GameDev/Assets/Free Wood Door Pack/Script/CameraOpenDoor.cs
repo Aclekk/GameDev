@@ -85,11 +85,26 @@ namespace CameraDoorScript
                 {
                     // ROUTE ONLY ke EscapeDoor (biar EscapeDoor.cs yang urus key/freeze/win)
                     var esc = nearestEscape.GetComponent<EscapeDoor>();
-                    if (!esc) esc = nearestEscape.GetComponentInChildren<EscapeDoor>(true);
-                    if (esc)
-                        esc.TryInteractFromCamera();  // pastikan method ini ada di EscapeDoor.cs
+                    if (esc != null)
+                    {
+                        // Use SendMessage so this compiles even if EscapeDoor doesn't define the method;
+                        // SendMessage will call TryInteractFromCamera if it's implemented, otherwise it's ignored.
+                        esc.SendMessage("TryInteractFromCamera", SendMessageOptions.DontRequireReceiver);
+                    }
                     else
-                        Debug.LogWarning("[CameraOpenDoor] Object bertag EscapeDoor tapi komponen EscapeDoor tidak ditemukan.");
+                    {
+                        var escChild = nearestEscape.GetComponentInChildren<EscapeDoor>(true);
+                        if (escChild != null)
+                        {
+                            escChild.SendMessage("TryInteractFromCamera", SendMessageOptions.DontRequireReceiver);
+                        }
+                        else
+                        {
+                            // As a fallback, send the message to the escape root so any handler may respond.
+                            nearestEscape.SendMessage("TryInteractFromCamera", SendMessageOptions.DontRequireReceiver);
+                            Debug.LogWarning("[CameraOpenDoor] Object bertag EscapeDoor tapi komponen EscapeDoor tidak ditemukan.");
+                        }
+                    }
                 }
                 else if (nearestDoor != null)
                 {
