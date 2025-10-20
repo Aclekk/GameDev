@@ -1,36 +1,49 @@
+// SceneRefLoader.cs
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.IO;
 
 public class SceneRefLoader : MonoBehaviour
 {
-    // Tarik (drag) asset scene .unity ke sini di Inspector (Editor only)
     #if UNITY_EDITOR
     public UnityEditor.SceneAsset sceneAsset;
     #endif
 
-    // Disimpan sebagai path agar tetap bekerja saat build
-    [SerializeField] private string scenePath;
+    [SerializeField] private string scenePath;   // ex: "Assets/Scenes/MainMenu.unity"
+    [SerializeField] private string sceneName;   // ex: "MainMenu"
 
     #if UNITY_EDITOR
-    // Setiap berubah di Inspector, simpan path scene
     void OnValidate()
     {
-        scenePath = sceneAsset ? UnityEditor.AssetDatabase.GetAssetPath(sceneAsset) : null;
+        if (sceneAsset)
+        {
+            scenePath = UnityEditor.AssetDatabase.GetAssetPath(sceneAsset);
+            sceneName = sceneAsset.name;
+        }
+        else
+        {
+            scenePath = null;
+            sceneName = null;
+        }
     }
     #endif
 
-    // Panggil dari Button OnClick()
     public void Load()
     {
-        Time.timeScale = 1f;  // pastikan un-pause
+        Time.timeScale = 1f;
 
-        if (string.IsNullOrEmpty(scenePath))
+        if (!string.IsNullOrEmpty(sceneName) && SceneExistsByName(sceneName))
         {
-            Debug.LogWarning("[SceneRefLoader] Scene belum di-assign.");
+            SceneManager.LoadScene(sceneName);
             return;
         }
 
-        // scene harus sudah ditambahkan ke Build Settings
+        if (string.IsNullOrEmpty(scenePath))
+        {
+            Debug.LogWarning("[SceneRefLoader] Scene belum di-assign (name/path).");
+            return;
+        }
+
         int buildIndex = SceneUtility.GetBuildIndexByScenePath(scenePath);
         if (buildIndex < 0)
         {
@@ -39,5 +52,17 @@ public class SceneRefLoader : MonoBehaviour
         }
 
         SceneManager.LoadScene(buildIndex);
+    }
+
+    static bool SceneExistsByName(string name)
+    {
+        int count = SceneManager.sceneCountInBuildSettings;
+        for (int i = 0; i < count; i++)
+        {
+            string path = SceneUtility.GetScenePathByBuildIndex(i);
+            string n = Path.GetFileNameWithoutExtension(path);
+            if (n == name) return true;
+        }
+        return false;
     }
 }

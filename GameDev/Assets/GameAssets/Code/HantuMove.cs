@@ -32,8 +32,8 @@ public class HantuMove : MonoBehaviour
     public float loseRadiusMultiplier = 1.35f;
 
     [Header("Audio (bunyi hanya saat dekat)")]
-    public float audioTriggerRadius = 6f;
-    public float audioMaxDistance = 12f;
+    public float audioTriggerRadius = 30f;
+    public float audioMaxDistance = 35f;
     public float audioFadeSpeed = 6f;
     [Range(0f, 1f)] public float audioMaxVolume = 0.9f;
 
