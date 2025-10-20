@@ -5,27 +5,27 @@ public class EscapeDoor : MonoBehaviour
 {
     [Header("Key & UI")]
     public string requiredKeyId = "BasementKey";
-    public GameObject needKeyText;      // UI "Need a key" (inactive di awal)
-    public GameObject winCanvas;        // WinCanvas (inactive di awal)
+    public GameObject needKeyText;      
+    public GameObject winCanvas;        
 
     [Header("Player Refs")]
-    public Transform player;            // drag Player (root)
-    public Camera playerCamera;         // drag PlayerCamera (dipakai untuk jarak)
-    public MonoBehaviour playerControllerToDisable; // drag controller player (FPC/HeroController)
+    public Transform player;            
+    public Camera playerCamera;         
+    public MonoBehaviour playerControllerToDisable; 
 
     [Header("Interact")]
-    public float interactRadius = 2.0f; // radius tekan E (horizontal)
+    public float interactRadius = 2.0f; 
     public KeyCode interactKey = KeyCode.E;
-    public float winDelay = 0.8f;       // jeda sebelum WinCanvas
+    public float winDelay = 0.8f;       
 
     [Header("Teleport Points")]
-    public Transform insidePoint;       // Titik spawn di DALAM rumah (drag empty GameObject)
-    public Transform outsideCheckPoint; // Titik referensi LUAR rumah (untuk deteksi posisi)
-    public float checkDistance = 5f;    // Jarak dari outsideCheckPoint untuk deteksi "di luar"
+    public Transform insidePoint;       
+    public Transform outsideCheckPoint; 
+    public float checkDistance = 5f;    
 
     [Header("Teleport Settings")]
-    public float fadeInDuration = 0.3f; // Durasi fade saat teleport (optional)
-    public AudioClip doorSound;         // Sound effect pintu (optional)
+    public float fadeInDuration = 0.3f; 
+    public AudioClip doorSound;         
 
     // runtime
     Inventory inventory;
@@ -36,7 +36,7 @@ public class EscapeDoor : MonoBehaviour
     void Start()
     {
         if (!player && GameObject.Find("Player")) player = GameObject.Find("Player").transform;
-        if (!playerCamera && Camera.main)         playerCamera = Camera.main;
+        if (!playerCamera && Camera.main) playerCamera = Camera.main;
 
         if (!player || !playerCamera)
         {
@@ -51,7 +51,7 @@ public class EscapeDoor : MonoBehaviour
             enabled = false; return;
         }
 
-        // Setup audio source untuk sound effect
+        // Setup audio source
         audioSource = GetComponent<AudioSource>();
         if (!audioSource && doorSound)
         {
@@ -62,32 +62,27 @@ public class EscapeDoor : MonoBehaviour
         if (winCanvas && winCanvas.activeSelf) winCanvas.SetActive(false);
         if (needKeyText) needKeyText.SetActive(false);
 
-        // Validasi teleport points
         if (!insidePoint)
-            Debug.LogWarning("[EscapeDoor] InsidePoint tidak di-set! Teleport tidak akan berfungsi.");
+            Debug.LogWarning("[EscapeDoor] InsidePoint tidak di-set!");
         if (!outsideCheckPoint)
-            Debug.LogWarning("[EscapeDoor] OutsideCheckPoint tidak di-set! Deteksi posisi tidak akurat.");
+            Debug.LogWarning("[EscapeDoor] OutsideCheckPoint tidak di-set!");
     }
 
     void Update()
     {
         if (done) return;
 
-        // jarak HORIZONTAL dari kamera ke pintu
         if (HorizontalDistance(playerCamera.transform.position, transform.position) <= interactRadius
             && Input.GetKeyDown(interactKey))
         {
-            // Deteksi apakah player di luar atau dalam rumah
             bool isPlayerOutside = IsPlayerOutside();
 
             if (isPlayerOutside)
             {
-                // Player di luar → Masuk tanpa kunci
                 StartCoroutine(EnterHouse());
             }
             else
             {
-                // Player di dalam → Butuh kunci untuk keluar
                 if (!inventory.HasKey(requiredKeyId))
                 {
                     if (needKeyCo != null) StopCoroutine(needKeyCo);
@@ -101,45 +96,36 @@ public class EscapeDoor : MonoBehaviour
         }
     }
 
-    // Deteksi apakah player berada di luar rumah
     bool IsPlayerOutside()
     {
         if (!outsideCheckPoint)
         {
-            // Fallback: cek berdasarkan transform pintu (asumsi pintu menghadap ke luar)
-            // Player di luar jika berada di sisi depan pintu (dot product > 0)
             Vector3 toPlayer = (player.position - transform.position).normalized;
             return Vector3.Dot(transform.forward, toPlayer) > 0;
         }
 
-        // Cek jarak dari outsideCheckPoint
         float distanceToOutside = Vector3.Distance(player.position, outsideCheckPoint.position);
         return distanceToOutside <= checkDistance;
     }
 
     IEnumerator EnterHouse()
     {
-        // Disable player control sementara
         if (playerControllerToDisable) playerControllerToDisable.enabled = false;
 
-        // Play sound effect
         if (audioSource && doorSound)
             audioSource.PlayOneShot(doorSound);
 
-        // Optional: Fade out effect
         yield return new WaitForSeconds(0.2f);
 
-        // Teleport player ke dalam rumah
         if (insidePoint)
         {
-            // Disable CharacterController jika ada (supaya bisa teleport)
             CharacterController cc = player.GetComponent<CharacterController>();
             if (cc)
             {
                 cc.enabled = false;
                 player.position = insidePoint.position;
                 player.rotation = insidePoint.rotation;
-                yield return null; // Tunggu 1 frame
+                yield return null;
                 cc.enabled = true;
             }
             else
@@ -151,10 +137,8 @@ public class EscapeDoor : MonoBehaviour
             Debug.Log("[EscapeDoor] Player teleported inside the house.");
         }
 
-        // Optional: Fade in effect
         yield return new WaitForSeconds(fadeInDuration);
 
-        // Re-enable player control
         if (playerControllerToDisable) playerControllerToDisable.enabled = true;
     }
 
@@ -171,17 +155,57 @@ public class EscapeDoor : MonoBehaviour
     {
         done = true;
 
-        // Freeze kontrol player
-        if (playerControllerToDisable) playerControllerToDisable.enabled = false;
+        // ✅ Matikan kontrol player
+        if (playerControllerToDisable)
+            playerControllerToDisable.enabled = false;
+
+        // ✅ Matikan semua hantu di scene (script: HantuMove)
+        StopAllEnemies();
+
+        // ✅ Mainkan suara pintu / escape
+        if (audioSource && doorSound)
+            audioSource.PlayOneShot(doorSound);
 
         yield return new WaitForSeconds(winDelay);
 
+        // ✅ Nonaktifkan physics biar player gak bisa gerak
+        CharacterController cc = player.GetComponent<CharacterController>();
+        Rigidbody rb = player.GetComponent<Rigidbody>();
+        if (cc) cc.enabled = false;
+        if (rb)
+        {
+            rb.velocity = Vector3.zero;
+            rb.isKinematic = true;
+        }
+
+        // ✅ Tampilkan UI menang
         if (winCanvas)
         {
             winCanvas.SetActive(true);
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
+
+        Debug.Log("[EscapeDoor] Player escaped successfully. Semua hantu dimatikan.");
+    }
+
+    void StopAllEnemies()
+    {
+        // Cari semua script HantuMove dan matikan
+        HantuMove[] semuaHantu = FindObjectsOfType<HantuMove>();
+
+        foreach (HantuMove h in semuaHantu)
+        {
+            h.enabled = false;
+
+            Animator anim = h.GetComponent<Animator>();
+            if (anim) anim.enabled = false;
+
+            AudioSource aud = h.GetComponent<AudioSource>();
+            if (aud) aud.Stop();
+        }
+
+        Debug.Log($"[EscapeDoor] {semuaHantu.Length} hantu (HantuMove) telah dimatikan.");
     }
 
     static float HorizontalDistance(Vector3 a, Vector3 b)
@@ -197,23 +221,16 @@ public class EscapeDoor : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        // Gizmos untuk radius interaksi pintu
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, interactRadius);
 
-        // Gizmos untuk inside point
         if (insidePoint)
         {
             Gizmos.color = Color.green;
             Gizmos.DrawWireSphere(insidePoint.position, 0.5f);
             Gizmos.DrawLine(transform.position, insidePoint.position);
-            
-            // Arrow untuk rotasi
-            Gizmos.color = Color.blue;
-            Gizmos.DrawRay(insidePoint.position, insidePoint.forward * 2f);
         }
 
-        // Gizmos untuk outside check point
         if (outsideCheckPoint)
         {
             Gizmos.color = Color.red;
@@ -222,7 +239,6 @@ public class EscapeDoor : MonoBehaviour
         }
         else
         {
-            // Fallback: show door forward direction
             Gizmos.color = Color.yellow;
             Gizmos.DrawRay(transform.position, transform.forward * 3f);
         }

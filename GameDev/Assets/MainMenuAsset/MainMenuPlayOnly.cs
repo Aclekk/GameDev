@@ -5,7 +5,6 @@ using UnityEngine.SceneManagement;
 
 public class MainMenuPlayOnly : MonoBehaviour
 {
-    // Ganti sesuai nama scene kamu — kamu bilang "Game"
     [SerializeField] string gameSceneName = "Game";
 
     public void OnPlay()
@@ -16,6 +15,7 @@ public class MainMenuPlayOnly : MonoBehaviour
             return;
         }
 
+        PlayerPrefs.DeleteKey("TutorialShown"); // Reset tutorial biar muncul lagi
         SceneManager.LoadScene(gameSceneName);
     }
 }
