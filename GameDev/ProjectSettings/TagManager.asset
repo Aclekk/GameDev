@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 2
   tags:
   - EscapeDoor
+  - wood
   layers:
   - Default
   - TransparentFX
