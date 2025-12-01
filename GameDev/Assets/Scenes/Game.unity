@@ -14,8 +14,8 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 9
-  m_Fog: 0
-  m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  m_Fog: 1
+  m_FogColor: {r: 0.22352941, g: 0.22352941, b: 0.22352941, a: 1}
   m_FogMode: 3
   m_FogDensity: 0.01
   m_LinearFogStart: 0
@@ -1129,6 +1129,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A_4x (71)
       objectReference: {fileID: 0}
+    - target: {fileID: 165712, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 483006, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
       propertyPath: m_RootOrder
       value: 81
@@ -1334,6 +1338,10 @@ PrefabInstance:
     - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_B (7)
+      objectReference: {fileID: 0}
+    - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 401192, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_RootOrder
@@ -1994,6 +2002,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (62)
       objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder
       value: 373
@@ -2047,6 +2059,10 @@ PrefabInstance:
     - target: {fileID: 165712, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A_4x (66)
+      objectReference: {fileID: 0}
+    - target: {fileID: 165712, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 483006, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
       propertyPath: m_RootOrder
@@ -2367,6 +2383,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_B (8)
       objectReference: {fileID: 0}
+    - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 401192, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_RootOrder
       value: 40
@@ -2415,6 +2435,10 @@ PrefabInstance:
     - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_B (3)
+      objectReference: {fileID: 0}
+    - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 401192, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_RootOrder
@@ -2631,6 +2655,10 @@ PrefabInstance:
     - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (60)
+      objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder
@@ -4021,6 +4049,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_B (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 401192, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_RootOrder
       value: 247
@@ -5086,6 +5118,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_B (6)
       objectReference: {fileID: 0}
+    - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 401192, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_RootOrder
       value: 156
@@ -5246,6 +5282,10 @@ PrefabInstance:
     - target: {fileID: 165712, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A_4x (70)
+      objectReference: {fileID: 0}
+    - target: {fileID: 165712, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 483006, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
       propertyPath: m_RootOrder
@@ -7132,6 +7172,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (95)
       objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder
       value: 117
@@ -7332,6 +7376,10 @@ PrefabInstance:
     - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_B (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 401192, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_RootOrder
@@ -58487,6 +58535,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (63)
       objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder
       value: 85
@@ -60405,6 +60457,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A_4x (68)
       objectReference: {fileID: 0}
+    - target: {fileID: 165712, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 483006, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
       propertyPath: m_RootOrder
       value: 313
@@ -60809,6 +60865,10 @@ PrefabInstance:
     - target: {fileID: 165712, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A_4x (63)
+      objectReference: {fileID: 0}
+    - target: {fileID: 165712, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 483006, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
       propertyPath: m_RootOrder
@@ -62240,6 +62300,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (59)
       objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder
       value: 77
@@ -62585,6 +62649,10 @@ PrefabInstance:
     - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (96)
+      objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder
@@ -63616,6 +63684,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A_4x (62)
       objectReference: {fileID: 0}
+    - target: {fileID: 165712, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 483006, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
       propertyPath: m_RootOrder
       value: 361
@@ -63955,6 +64027,10 @@ PrefabInstance:
     - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_B (4)
+      objectReference: {fileID: 0}
+    - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 401192, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_RootOrder
@@ -64866,6 +64942,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (65)
       objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder
       value: 78
@@ -64919,6 +64999,10 @@ PrefabInstance:
     - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_B (5)
+      objectReference: {fileID: 0}
+    - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 401192, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_RootOrder
@@ -65789,6 +65873,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (94)
       objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder
       value: 194
@@ -66311,6 +66399,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A_4x (59)
       objectReference: {fileID: 0}
+    - target: {fileID: 165712, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 483006, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
       propertyPath: m_RootOrder
       value: 365
@@ -66405,6 +66497,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1431639281}
     m_Modifications:
+    - target: {fileID: 161730, guid: e21009e7dc5e8544c82d5fe2b089da33, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 489968, guid: e21009e7dc5e8544c82d5fe2b089da33, type: 3}
       propertyPath: m_RootOrder
       value: 26
@@ -67140,7 +67236,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1431639281}
   m_Layer: 0
-  m_Name: Pref_Villa2_D
+  m_Name: Mansion
   m_TagString: Untagged
   m_Icon: {fileID: 5721338939258241955, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
@@ -67562,6 +67658,10 @@ PrefabInstance:
     - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (84)
+      objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder
@@ -68281,6 +68381,10 @@ PrefabInstance:
     - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (76)
+      objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder
@@ -69162,6 +69266,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A_4x (64)
       objectReference: {fileID: 0}
+    - target: {fileID: 165712, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 483006, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
       propertyPath: m_RootOrder
       value: 242
@@ -69909,6 +70017,10 @@ PrefabInstance:
     - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (48)
+      objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder
@@ -70760,6 +70872,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (98)
       objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder
       value: 246
@@ -71268,6 +71384,10 @@ PrefabInstance:
     - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_B (9)
+      objectReference: {fileID: 0}
+    - target: {fileID: 162026, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 401192, guid: ee1b5b58c90552741b2e3276d8b5db74, type: 3}
       propertyPath: m_RootOrder
@@ -72333,6 +72453,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A_4x (69)
       objectReference: {fileID: 0}
+    - target: {fileID: 165712, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 483006, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
       propertyPath: m_RootOrder
       value: 9
@@ -72733,6 +72857,10 @@ PrefabInstance:
     - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (72)
+      objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder
@@ -73915,6 +74043,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A_4x (67)
       objectReference: {fileID: 0}
+    - target: {fileID: 165712, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
+      propertyPath: m_TagString
+      value: wood
+      objectReference: {fileID: 0}
     - target: {fileID: 483006, guid: 558a097bc18737e4f86558385790d6f7, type: 3}
       propertyPath: m_RootOrder
       value: 346
@@ -74951,6 +75083,10 @@ PrefabInstance:
     - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_Name
       value: Villa2_Floor_Mid_A (100)
+      objectReference: {fileID: 0}
+    - target: {fileID: 180598, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
+      propertyPath: m_TagString
+      value: wood
       objectReference: {fileID: 0}
     - target: {fileID: 415016, guid: 4743926f06b7fdc4c93033724c776cdc, type: 3}
       propertyPath: m_RootOrder

@@ -1308,8 +1308,8 @@ MonoBehaviour:
   soundOnButton: {fileID: 1373094044}
   soundOffButton: {fileID: 406961858}
   musicFadeTime: 0.25
-  titleInTime: 1.2
-  buttonsInTime: 0.8
+  titleInTime: 0
+  buttonsInTime: 0
   optionsInTime: 0.55
   optionsOutTime: 0.4
 --- !u!1 &852326086
