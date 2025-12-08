@@ -1,62 +1,110 @@
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class HantuMove : MonoBehaviour
 {
-    public enum State { Patrol, Chase }
-    public enum PathMode { HierarchyOrder, NearestChain }
-
     [Header("Referensi")]
     public Transform player;
-    public Animator animator;                 // bool "isCrawl"
+    public Animator animator;                 // bool "isCrawl", trigger "Disappear", "Appear"
     public AudioSource audioSource;
     public AudioClip crawlClip;
+    public LanternController lanternController;
 
-    [Header("Waypoint / Patrol")]
-    public Transform waypointsParent;         // drag "Movepoint"
-    public Transform[] waypoints;             // auto-terisi
-    public PathMode pathMode = PathMode.HierarchyOrder;
-    public bool loop = true;
-    public float waitAtPoint = 0.2f;
-    public float waypointTolerance = 0.6f;
+    [Header("NavMesh")]
+    public NavMeshAgent navMeshAgent;
+    public float wanderSpeed = 2f;
+    public float chaseSpeed = 4f;
+    public float wanderRadius = 15f;
+    public float idleChance = 0.3f;         // 30% chance to idle when reaching destination
+    public float idleDuration = 2f;
 
-    [Header("Kecepatan")]
-    public float patrolSpeed = 1.2f;
-    public float chaseSpeed = 2.2f;
-    [Range(0.2f, 3f)] public float speedMultiplier = 1f;
-    public float rotateSpeed = 8f;
+    [Header("Spawn System")]
+    public Transform[] spawnPoints;         // movepoint 1-4
+    public float minSpawnTime = 30f;
+    public float maxSpawnTime = 70f;
+    public bool startHidden = true;
+    public bool debugImmediateSpawn = false; // Set to true for testing
+    public float spawnYOffset = 1f;         // Offset to prevent sinking into ground
 
-    [Header("Deteksi Player")]
-    public float detectionRadius = 8f;
-    public float loseRadiusMultiplier = 1.35f;
+    [Header("Lantern Detection")]
+    public float lanternDetectionRadius = 10f;
+    public float gazeDetectionAngle = 30f;  // sudut untuk deteksi tatapan player
+    public LayerMask playerLayer;
 
-    [Header("Audio (bunyi hanya saat dekat)")]
+    [Header("Audio")]
     public float audioTriggerRadius = 30f;
     public float audioMaxDistance = 35f;
     public float audioFadeSpeed = 6f;
     [Range(0f, 1f)] public float audioMaxVolume = 0.9f;
 
     // --- runtime ---
-    private int _index;
-    private float _waitTimer;
-    private State _state = State.Patrol;
-    private Vector3 _lastMoveDir;
-    private bool _movedThisFrame;
-    private const float _eps = 0.0001f;
-
-    // --- untuk blokir audio saat jumpscare/keadaan khusus ---
-    [SerializeField] private bool _suppressAudio = false;
+    private enum GhostState { Hidden, Spawning, Idle, Wandering, Disappearing }
+    private GhostState _currentState = GhostState.Hidden;
+    private Vector3 _wanderTarget;
+    private float _spawnTimer;
+    private float _nextSpawnTime;
+    private float _idleTimer;
+    private bool _isMoving = false;
+    private bool _suppressAudio = false;
+    
+    [Header("Debug Info")]
+    [SerializeField] private string debugState;
+    [SerializeField] private float debugSpawnTimer;
+    [SerializeField] private float debugNextSpawnTime;
 
     void Awake()
     {
-        if (waypointsParent == null)
+        // Setup NavMesh Agent
+        if (navMeshAgent == null)
+            navMeshAgent = GetComponent<NavMeshAgent>();
+        
+        if (navMeshAgent != null)
+        {
+            navMeshAgent.speed = wanderSpeed;
+            navMeshAgent.stoppingDistance = 0.5f;
+            navMeshAgent.autoBraking = true;
+        }
+
+        // Setup spawn points
+        if (spawnPoints == null || spawnPoints.Length == 0)
         {
             var mp = GameObject.Find("Movepoint");
-            if (mp) waypointsParent = mp.transform;
+            if (mp != null)
+            {
+                var list = new List<Transform>();
+                for (int i = 0; i < mp.transform.childCount; i++)
+                    list.Add(mp.transform.GetChild(i));
+                spawnPoints = list.ToArray();
+                Debug.Log($"Found {spawnPoints.Length} spawn points from Movepoint object");
+            }
+            else
+            {
+                Debug.LogError("Movepoint object not found! Please create a Movepoint parent object with child spawn points.");
+                // Try to find any GameObject with "movepoint" in name as fallback
+                GameObject[] allObjects = FindObjectsOfType<GameObject>();
+                var fallbackList = new List<Transform>();
+                foreach (GameObject obj in allObjects)
+                {
+                    if (obj.name.ToLower().Contains("movepoint") || obj.name.ToLower().Contains("spawn"))
+                    {
+                        fallbackList.Add(obj.transform);
+                    }
+                }
+                if (fallbackList.Count > 0)
+                {
+                    spawnPoints = fallbackList.ToArray();
+                    Debug.Log($"Fallback: Found {spawnPoints.Length} spawn points from objects containing 'movepoint' or 'spawn'");
+                }
+            }
         }
-        BuildWaypointRoute();
+        else
+        {
+            Debug.Log($"Using assigned spawn points: {spawnPoints.Length} points");
+        }
 
+        // Setup audio
         if (audioSource)
         {
             audioSource.clip = crawlClip;
@@ -69,6 +117,24 @@ public class HantuMove : MonoBehaviour
             audioSource.maxDistance = Mathf.Max(audioTriggerRadius, audioMaxDistance);
             audioSource.volume = 0f;
         }
+
+        // Find lantern controller if not assigned
+        if (lanternController == null)
+            lanternController = FindObjectOfType<LanternController>();
+
+        // Start hidden
+        if (startHidden && !debugImmediateSpawn)
+        {
+            _currentState = GhostState.Hidden;
+            // gameObject.SetActive(false);   // Fixed: Keep object active so Update runs
+            HideGhostVisual(); // Hide visual instead of deactivating
+            ScheduleNextSpawn();
+        }
+        else
+        {
+            Debug.Log("Starting immediate spawn (debug mode or startHidden=false)");
+            SpawnGhost();
+        }
     }
 
     void OnDisable()
@@ -77,143 +143,282 @@ public class HantuMove : MonoBehaviour
         ForceStopFootstepAudio();
     }
 
-    // --- ROUTE BUILDER ---
-    void BuildWaypointRoute()
+    // --- VISUAL HIDING ---
+    void HideGhostVisual()
     {
-        if (waypointsParent == null || waypointsParent.childCount == 0)
+        // Hide mesh renderer
+        var renderer = GetComponent<Renderer>();
+        if (renderer != null)
+            renderer.enabled = false;
+        
+        // Hide all child renderers
+        var childRenderers = GetComponentsInChildren<Renderer>();
+        foreach (var childRenderer in childRenderers)
+            childRenderer.enabled = false;
+        
+        // Stop NavMeshAgent
+        if (navMeshAgent)
+            navMeshAgent.isStopped = true;
+    }
+    
+    void ShowGhostVisual()
+    {
+        // Show mesh renderer
+        var renderer = GetComponent<Renderer>();
+        if (renderer != null)
+            renderer.enabled = true;
+        
+        // Show all child renderers
+        var childRenderers = GetComponentsInChildren<Renderer>();
+        foreach (var childRenderer in childRenderers)
+            childRenderer.enabled = true;
+        
+        // Resume NavMeshAgent
+        if (navMeshAgent)
+            navMeshAgent.isStopped = false;
+    }
+    
+    // --- SPAWN SYSTEM ---
+    void ScheduleNextSpawn()
+    {
+        _spawnTimer = 0f;
+        _nextSpawnTime = Random.Range(minSpawnTime, maxSpawnTime);
+        Debug.Log($"Next spawn scheduled in {_nextSpawnTime:F1} seconds");
+    }
+
+    void SpawnGhost()
+    {
+        Debug.Log("Attempting to spawn ghost...");
+        
+        if (spawnPoints == null || spawnPoints.Length == 0)
         {
-            waypoints = new Transform[0];
+            Debug.LogWarning("No spawn points available!");
             return;
         }
 
-        if (pathMode == PathMode.HierarchyOrder)
+        // Choose random spawn point
+        Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
+        Debug.Log($"Selected spawn point: {spawnPoint.name} at position {spawnPoint.position}");
+
+        // Calculate spawn position with Y offset
+        Vector3 spawnPos = spawnPoint.position;
+        spawnPos.y += spawnYOffset;
+
+        // Use NavMeshAgent.Warp for proper NavMesh positioning
+        if (navMeshAgent != null)
         {
-            var list = new List<Transform>();
-            for (int i = 0; i < waypointsParent.childCount; i++)
-                list.Add(waypointsParent.GetChild(i));
-            waypoints = list.ToArray();
+            navMeshAgent.Warp(spawnPos);
+            Debug.Log($"Ghost warped to NavMesh position: {spawnPos}");
         }
         else
         {
-            var all = new List<Transform>();
-            for (int i = 0; i < waypointsParent.childCount; i++)
-                all.Add(waypointsParent.GetChild(i));
-
-            var route = new List<Transform>();
-            Transform current = all.OrderBy(t => Vector3.SqrMagnitude(t.position - transform.position)).First();
-            route.Add(current);
-            all.Remove(current);
-
-            while (all.Count > 0)
-            {
-                current = all.OrderBy(t => Vector3.SqrMagnitude(t.position - current.position)).First();
-                route.Add(current);
-                all.Remove(current);
-            }
-            waypoints = route.ToArray();
+            transform.position = spawnPos;
+            Debug.Log($"Ghost positioned at: {spawnPos}");
         }
+        
+        // Show ghost visual and start spawning
+        ShowGhostVisual();
+        Debug.Log("Ghost visual shown, starting spawn sequence");
+        StartCoroutine(SpawnSequence());
+    }
 
-        _index = 0;
-        _waitTimer = 0f;
+    IEnumerator SpawnSequence()
+    {
+        _currentState = GhostState.Spawning;
+        
+        // Play appear animation
+        if (animator)
+            animator.SetTrigger("Appear");
+        
+        // Wait for animation to finish
+        yield return new WaitForSeconds(1f);
+        
+        // Start wandering after spawn
+        StartWandering();
+    }
+
+    IEnumerator DisappearSequence()
+    {
+        _currentState = GhostState.Disappearing;
+        
+        // Stop movement
+        if (navMeshAgent)
+            navMeshAgent.isStopped = true;
+        
+        // Play idle animation first
+        if (animator)
+            animator.SetBool("isCrawl", false);
+        
+        yield return new WaitForSeconds(1f);
+        
+        // Play disappear animation
+        if (animator)
+            animator.SetTrigger("Disappear");
+        
+        yield return new WaitForSeconds(1f);
+        
+        // Hide ghost and schedule next spawn
+        // gameObject.SetActive(false);       // Fixed: Keep object active so Update runs
+        HideGhostVisual();
+        _currentState = GhostState.Hidden;
+        ScheduleNextSpawn();
     }
 
     void Update()
     {
-        _movedThisFrame = false; // reset flag di awal frame
-
-        float distToPlayer = player ? Vector3.Distance(transform.position, player.position) : Mathf.Infinity;
-
-        switch (_state)
+        // Update debug info
+        debugState = _currentState.ToString();
+        debugSpawnTimer = _spawnTimer;
+        debugNextSpawnTime = _nextSpawnTime;
+        
+        // Handle spawn timer when hidden
+        if (_currentState == GhostState.Hidden)
         {
-            case State.Patrol:
-                if (distToPlayer <= detectionRadius) _state = State.Chase;
-                PatrolOnly();
-                break;
-
-            case State.Chase:
-                if (distToPlayer > detectionRadius * loseRadiusMultiplier) _state = State.Patrol;
-                ChasePlayer();
-                break;
-        }
-
-        bool isMoving = _movedThisFrame;
-        if (animator) animator.SetBool("isCrawl", isMoving);
-        UpdateFootstepAudio(isMoving, distToPlayer);
-    }
-
-    void PatrolOnly()
-    {
-        if (waypoints == null || waypoints.Length == 0) return;
-
-        Transform target = waypoints[Mathf.Clamp(_index, 0, waypoints.Length - 1)];
-        float dist = Vector3.Distance(Flat(transform.position), Flat(target.position));
-
-        // Sudah sampai → JEDA (TIDAK memanggil MoveTowards!)
-        if (dist <= waypointTolerance)
-        {
-            _lastMoveDir = Vector3.zero;
-            _movedThisFrame = false;
-
-            _waitTimer += Time.deltaTime;
-            if (_waitTimer >= waitAtPoint)
+            _spawnTimer += Time.deltaTime;
+            if (_spawnTimer >= _nextSpawnTime)
             {
-                _waitTimer = 0f;
-                _index++;
-                if (_index >= waypoints.Length)
-                    _index = loop ? 0 : waypoints.Length - 1;
+                SpawnGhost();
             }
             return;
         }
 
-        // Belum sampai → bergerak
-        MoveTowards(target.position, patrolSpeed * speedMultiplier);
+        // Check for lantern detection and player gaze
+        if (_currentState != GhostState.Hidden && _currentState != GhostState.Disappearing)
+        {
+            if (IsInLanternRadius() && IsPlayerLookingAtGhost())
+            {
+                StartCoroutine(DisappearSequence());
+                return;
+            }
+        }
+
+        // Handle different states
+        switch (_currentState)
+        {
+            case GhostState.Spawning:
+                // Spawning animation handled by coroutine
+                break;
+
+            case GhostState.Idle:
+                _idleTimer += Time.deltaTime;
+                if (_idleTimer >= idleDuration)
+                {
+                    StartWandering();
+                }
+                break;
+
+            case GhostState.Wandering:
+                HandleWandering();
+                break;
+        }
+
+        UpdateAnimator();
+        UpdateFootstepAudio();
     }
 
-    void ChasePlayer()
+    // --- MOVEMENT SYSTEM ---
+    void StartWandering()
     {
-        if (!player) return;
-        MoveTowards(player.position, chaseSpeed * speedMultiplier);
+        _currentState = GhostState.Wandering;
+        SetNewWanderTarget();
     }
 
-    void MoveTowards(Vector3 targetPos, float speed)
+    void SetNewWanderTarget()
     {
-        Vector3 to = targetPos - transform.position;
-        to.y = 0f;
-        Vector3 dir = to.normalized;
+        if (navMeshAgent == null) return;
 
-        if (dir.sqrMagnitude > _eps)
+        // Random chance to idle
+        if (Random.value < idleChance)
         {
-            Quaternion look = Quaternion.LookRotation(dir, Vector3.up);
-            transform.rotation = Quaternion.Slerp(transform.rotation, look, rotateSpeed * Time.deltaTime);
+            StartIdle();
+            return;
         }
 
-        Vector3 delta = dir * speed * Time.deltaTime;
-
-        if (delta.sqrMagnitude > _eps)
+        // Find random position on NavMesh
+        Vector3 randomDirection = Random.insideUnitSphere * wanderRadius;
+        randomDirection += transform.position;
+        
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(randomDirection, out hit, wanderRadius, NavMesh.AllAreas))
         {
-            transform.position += delta;
-            _lastMoveDir = delta;
-            _movedThisFrame = true;              // bergerak
-        }
-        else
-        {
-            _lastMoveDir = Vector3.zero;
+            _wanderTarget = hit.position;
+            navMeshAgent.SetDestination(_wanderTarget);
+            navMeshAgent.isStopped = false;
         }
     }
 
-    // --- AUDIO: play hanya saat bergerak, stop saat diam; hormati suppress ---
-    void UpdateFootstepAudio(bool isMoving, float distToPlayer)
+    void HandleWandering()
+    {
+        if (navMeshAgent == null) return;
+
+        _isMoving = navMeshAgent.remainingDistance > navMeshAgent.stoppingDistance;
+
+        // Check if reached destination
+        if (!_isMoving && navMeshAgent.hasPath)
+        {
+            // Random chance to idle or set new target
+            if (Random.value < idleChance)
+            {
+                StartIdle();
+            }
+            else
+            {
+                SetNewWanderTarget();
+            }
+        }
+    }
+
+    void StartIdle()
+    {
+        _currentState = GhostState.Idle;
+        _idleTimer = 0f;
+        if (navMeshAgent)
+            navMeshAgent.isStopped = true;
+    }
+
+    // --- DETECTION SYSTEM ---
+    bool IsInLanternRadius()
+    {
+        if (lanternController == null || player == null) return false;
+        
+        float distance = Vector3.Distance(transform.position, player.position);
+        return distance <= lanternDetectionRadius && lanternController.IsOn;
+    }
+
+    bool IsPlayerLookingAtGhost()
+    {
+        if (player == null) return false;
+
+        Vector3 directionToGhost = (transform.position - player.position).normalized;
+        float dotProduct = Vector3.Dot(player.forward, directionToGhost);
+        float angle = Mathf.Acos(dotProduct) * Mathf.Rad2Deg;
+
+        return angle <= gazeDetectionAngle;
+    }
+
+    // --- ANIMATION & AUDIO ---
+    void UpdateAnimator()
+    {
+        if (animator == null) return;
+        
+        // Set crawling animation based on movement
+        animator.SetBool("isCrawl", _isMoving);
+    }
+
+    void UpdateFootstepAudio()
     {
         if (!audioSource || crawlClip == null) return;
 
-        // Saat suppress (mis. jumpscare), paksa diam
-        if (_suppressAudio)
+        float distToPlayer = player ? Vector3.Distance(transform.position, player.position) : Mathf.Infinity;
+
+        // Suppressed audio during special states
+        if (_suppressAudio || _currentState == GhostState.Spawning || _currentState == GhostState.Disappearing)
         {
             ForceStopFootstepAudio();
             return;
         }
 
-        if (!isMoving || distToPlayer > audioMaxDistance)
+        if (!_isMoving || distToPlayer > audioMaxDistance)
         {
             if (audioSource.isPlaying) audioSource.Stop();
             audioSource.volume = 0f;
@@ -231,7 +436,7 @@ public class HantuMove : MonoBehaviour
             audioSource.Play();
     }
 
-    // --- API utk skrip lain (mis. HantuJumpscare) ---
+    // --- API untuk skrip lain ---
     public void SuppressCrawlAudio(bool on)
     {
         _suppressAudio = on;
@@ -245,13 +450,41 @@ public class HantuMove : MonoBehaviour
         audioSource.volume = 0f;
     }
 
-    Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
+    public bool IsGhostActive()
+    {
+        return _currentState != GhostState.Hidden;
+    }
+
+    public void ForceDisappear()
+    {
+        if (_currentState != GhostState.Hidden && _currentState != GhostState.Disappearing)
+        {
+            StartCoroutine(DisappearSequence());
+        }
+    }
+    
+    [ContextMenu("Test Force Spawn")]
+    public void ForceSpawn()
+    {
+        Debug.Log("Force spawning ghost for testing");
+        _currentState = GhostState.Hidden;
+        SpawnGhost();
+    }
 
     void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.red; Gizmos.DrawWireSphere(transform.position, detectionRadius);
-        Gizmos.color = Color.gray; Gizmos.DrawWireSphere(transform.position, detectionRadius * loseRadiusMultiplier);
-        Gizmos.color = new Color(0f, 1f, 0f, 0.6f); Gizmos.DrawWireSphere(transform.position, audioTriggerRadius);
-        Gizmos.color = new Color(0f, 1f, 0f, 0.25f); Gizmos.DrawWireSphere(transform.position, audioMaxDistance);
+        // Lantern detection radius
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, lanternDetectionRadius);
+        
+        // Wandering radius
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, wanderRadius);
+        
+        // Audio radius
+        Gizmos.color = new Color(0f, 1f, 0f, 0.6f);
+        Gizmos.DrawWireSphere(transform.position, audioTriggerRadius);
+        Gizmos.color = new Color(0f, 1f, 0f, 0.25f);
+        Gizmos.DrawWireSphere(transform.position, audioMaxDistance);
     }
 }
