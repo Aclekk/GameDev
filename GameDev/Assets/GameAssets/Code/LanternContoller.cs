@@ -2,17 +2,19 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.UI;
+using TMPro;
 
 public class LanternController : MonoBehaviour
 {
     [Header("Referensi")]
-    public Light lanternLight;        // drag komponen Light (Spot / Point)
-    public AudioSource audioSource;   // opsional: SFX nyala / mati
+    public Light lanternLight;
+    public AudioSource audioSource;
     public AudioClip sfxIgnite;
     public AudioClip sfxExtinguish;
 
     [Header("Startup")]
-    public bool startOn = true;       // ← mulai ON
+    public bool startOn = true;
 
     [Header("Stat Minyak (Oil)")]
     public float maxOil = 100f;
@@ -22,15 +24,22 @@ public class LanternController : MonoBehaviour
     [Header("Lampu")]
     public float maxIntensity = 2.2f;
     public float minIntensity = 0.0f;
-    public float maxRange = 100f;     // ← range awal 100
+    public float maxRange = 100f;
     public float minRange = 0f;
 
     [Header("Input")]
     public KeyCode toggleKey = KeyCode.F;
 
     [Header("Events (Opsional untuk UI)")]
-    public UnityEvent<float> OnOilPercentChanged; // 0..1
-    public UnityEvent<bool> OnLanternToggled;     // true=ON
+    public UnityEvent<float> OnOilPercentChanged;
+    public UnityEvent<bool> OnLanternToggled;
+
+    [Header("UI Warning Settings")]
+    public GameObject lowOilWarningUI;   // UI Warning Text / TMP
+    public float warningThreshold = 0.40f; // 40%
+    public float blinkSpeed = 3f; // semakin besar semakin cepat berkedip
+
+    Coroutine blinkCo;
 
     public bool IsOn { get; private set; } = false;
 
@@ -39,26 +48,34 @@ public class LanternController : MonoBehaviour
         if (lanternLight == null)
             lanternLight = GetComponentInChildren<Light>(true);
 
-        // pastikan ada minyak (biar t=1 → range=maxRange)
         currentOil = Mathf.Clamp(currentOil, 0f, maxOil);
 
-        ApplyLightByOil();            // set intensity & range berdasar oil
-        SetLantern(startOn, true);    // ← langsung ON di awal kalau startOn = true
+        ApplyLightByOil();
+        SetLantern(startOn, true);
+
+        // Hide warning UI at start
+        if (lowOilWarningUI)
+            lowOilWarningUI.SetActive(false);
     }
 
     void Update()
     {
+        // Toggle lampu
         if (Input.GetKeyDown(toggleKey))
             SetLantern(!IsOn);
 
+        // Oil consumption
         if (IsOn && currentOil > 0f)
         {
             currentOil -= consumptionPerSecond * Time.deltaTime;
             currentOil = Mathf.Max(0f, currentOil);
-            if (currentOil <= 0f) SetLantern(false); // mati otomatis saat habis
+
+            if (currentOil <= 0f)
+                SetLantern(false);
         }
 
         ApplyLightByOil();
+        UpdateLowOilWarning();
     }
 
     public void AddOil(float amount)
@@ -99,12 +116,67 @@ public class LanternController : MonoBehaviour
 
         lanternLight.enabled = true;
 
-        // t=1 saat oil penuh → intensity=maxIntensity & range=maxRange (100)
-        float t = (maxOil <= 0f) ? 0f : Mathf.Clamp01(currentOil / maxOil);
+        float t = Mathf.Clamp01(currentOil / maxOil);
+
         lanternLight.intensity = Mathf.Lerp(minIntensity, maxIntensity, t);
         lanternLight.range = Mathf.Lerp(minRange, maxRange, t);
 
         OnOilPercentChanged?.Invoke(t);
+    }
+
+    // ==============================
+    //      LOW OIL WARNING SYSTEM
+    // ==============================
+    void UpdateLowOilWarning()
+    {
+        if (lowOilWarningUI == null) return;
+
+        float oilPercent = currentOil / maxOil;
+
+        bool shouldShow =
+            IsOn &&
+            oilPercent <= warningThreshold &&
+            currentOil > 0f;
+
+        if (shouldShow)
+        {
+            lowOilWarningUI.SetActive(true);
+
+            if (blinkCo == null)
+                blinkCo = StartCoroutine(BlinkWarning());
+        }
+        else
+        {
+            lowOilWarningUI.SetActive(false);
+
+            if (blinkCo != null)
+            {
+                StopCoroutine(blinkCo);
+                blinkCo = null;
+            }
+        }
+    }
+
+    IEnumerator BlinkWarning()
+    {
+        Graphic uiGraphic = lowOilWarningUI.GetComponent<Graphic>();
+        TMP_Text tmp = lowOilWarningUI.GetComponent<TMP_Text>();
+
+        while (true)
+        {
+            float alpha = (Mathf.Sin(Time.time * blinkSpeed) + 1f) / 2f;
+
+            Color c = Color.red;
+            c.a = alpha;
+
+            if (uiGraphic != null)
+                uiGraphic.color = c;
+
+            if (tmp != null)
+                tmp.color = c;
+
+            yield return null;
+        }
     }
 
     public float GetVisibilityStrength()
