@@ -1,112 +1,128 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class BasementDoor : MonoBehaviour
 {
     [Header("Player Refs")]
     public Transform player;
     public Camera playerCamera;
+    public MonoBehaviour playerControllerToDisable;
 
     [Header("Interact Settings")]
     public float interactRadius = 2.0f;
-    public Vector3 interactOffset;   // <<< AREA INTERAKSI BISA DIGESER DI INSPECTOR
+    public Vector3 interactOffset = Vector3.zero;
     public KeyCode interactKey = KeyCode.E;
 
-    [Header("UI Prompt")]
-    public GameObject pressEText;   // <<< UI text "Press E to Open the Door"
+    [Header("Teleport Points")]
+    public Transform insidePoint;
+    public Transform outsideCheckPoint;
+    public float checkDistance = 5f;
 
-    [Header("Audio (optional)")]
+    [Header("Teleport Settings")]
+    public float fadeInDuration = 0.3f;
     public AudioClip doorSound;
-    AudioSource audioSource;
 
-    bool isInRange = false;
+    AudioSource audioSource;
 
     void Start()
     {
-        if (!player && GameObject.Find("Player"))
-            player = GameObject.Find("Player").transform;
+        if (!player) player = GameObject.Find("Player")?.transform;
+        if (!playerCamera) playerCamera = Camera.main;
 
-        if (!playerCamera && Camera.main)
-            playerCamera = Camera.main;
-
-        if (!player || !playerCamera)
-        {
-            Debug.LogError("[BasementDoor] Player/Camera belum di-assign.");
-            enabled = false;
-            return;
-        }
-
-        // Setup audio
         audioSource = GetComponent<AudioSource>();
         if (!audioSource && doorSound)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
             audioSource.playOnAwake = false;
         }
-
-        // hide prompt on start
-        if (pressEText)
-            pressEText.SetActive(false);
     }
 
     void Update()
     {
-        Vector3 interactPos = transform.position + interactOffset;
-        float distance = HorizontalDistance(playerCamera.transform.position, interactPos);
+        // Hitung center interaksi (bisa digeser XYZ)
+        Vector3 interactCenter = transform.position + transform.TransformDirection(interactOffset);
 
-        bool nowInRange = distance <= interactRadius;
-
-        // 🔥 Show/hide prompt
-        if (pressEText)
+        if (Vector3.Distance(playerCamera.transform.position, interactCenter) <= interactRadius
+            && Input.GetKeyDown(interactKey))
         {
-            if (nowInRange && !isInRange)
-                pressEText.SetActive(true);
-
-            if (!nowInRange && isInRange)
-                pressEText.SetActive(false);
-        }
-
-        isInRange = nowInRange;
-
-        // Tekan E → pindah scene Basement
-        if (isInRange && Input.GetKeyDown(interactKey))
-        {
-            StartCoroutine(LoadBasementScene());
+            if (IsPlayerOutside())
+                StartCoroutine(EnterBasement());
+            else
+                StartCoroutine(ExitBasement());
         }
     }
 
-    IEnumerator LoadBasementScene()
+    bool IsPlayerOutside()
     {
-        if (audioSource && doorSound)
-            audioSource.PlayOneShot(doorSound);
+        if (!outsideCheckPoint) return true;
 
-        yield return new WaitForSeconds(0.3f);
-
-        SceneManager.LoadScene("Basement");
+        return Vector3.Distance(player.position, outsideCheckPoint.position) <= checkDistance;
     }
 
-    static float HorizontalDistance(Vector3 a, Vector3 b)
+    IEnumerator EnterBasement()
     {
-        a.y = 0f;
-        b.y = 0f;
-        return Vector3.Distance(a, b);
+        if (playerControllerToDisable) playerControllerToDisable.enabled = false;
+        if (audioSource && doorSound) audioSource.PlayOneShot(doorSound);
+
+        yield return new WaitForSeconds(0.2f);
+
+        TeleportPlayer(insidePoint);
+
+        yield return new WaitForSeconds(fadeInDuration);
+        if (playerControllerToDisable) playerControllerToDisable.enabled = true;
     }
 
-    void OnDisable()
+    IEnumerator ExitBasement()
     {
-        if (pressEText)
-            pressEText.SetActive(false);
+        if (playerControllerToDisable) playerControllerToDisable.enabled = false;
+        if (audioSource && doorSound) audioSource.PlayOneShot(doorSound);
+
+        yield return new WaitForSeconds(0.2f);
+
+        TeleportPlayer(outsideCheckPoint);
+
+        yield return new WaitForSeconds(fadeInDuration);
+        if (playerControllerToDisable) playerControllerToDisable.enabled = true;
+    }
+
+    void TeleportPlayer(Transform target)
+    {
+        if (!target) return;
+
+        CharacterController cc = player.GetComponent<CharacterController>();
+
+        if (cc)
+        {
+            cc.enabled = false;
+            player.position = target.position;
+            player.rotation = target.rotation;
+            cc.enabled = true;
+        }
+        else
+        {
+            player.position = target.position;
+            player.rotation = target.rotation;
+        }
     }
 
     void OnDrawGizmosSelected()
     {
+        // Gizmo untuk interaksi
         Gizmos.color = Color.cyan;
+        Vector3 interactCenter = transform.position + transform.TransformDirection(interactOffset);
+        Gizmos.DrawWireSphere(interactCenter, interactRadius);
 
-        Vector3 interactPos = transform.position + interactOffset;
+        // Gizmo teleport
+        if (insidePoint)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(insidePoint.position, 0.5f);
+        }
 
-        Gizmos.DrawWireSphere(interactPos, interactRadius);
-        Gizmos.DrawLine(transform.position, interactPos);
+        if (outsideCheckPoint)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(outsideCheckPoint.position, checkDistance);
+        }
     }
 }
