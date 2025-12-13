@@ -1,11 +1,13 @@
 using System.Collections;
 using UnityEngine;
+using TMPro;
 
 public class EscapeDoor : MonoBehaviour
 {
     [Header("Key & UI")]
     public string requiredKeyId = "BasementKey";
     public GameObject needKeyText;      
+    public GameObject pressEText;          // <-- DRAG "Press E" ke sini
     public GameObject winCanvas;        
 
     [Header("Player Refs")]
@@ -59,8 +61,9 @@ public class EscapeDoor : MonoBehaviour
             audioSource.playOnAwake = false;
         }
 
+        SetPrompt(pressEText, false, "Press \"E\" to Open");
+        SetPrompt(needKeyText, false, "Need a key");
         if (winCanvas && winCanvas.activeSelf) winCanvas.SetActive(false);
-        if (needKeyText) needKeyText.SetActive(false);
 
         if (!insidePoint)
             Debug.LogWarning("[EscapeDoor] InsidePoint tidak di-set!");
@@ -72,8 +75,10 @@ public class EscapeDoor : MonoBehaviour
     {
         if (done) return;
 
-        if (HorizontalDistance(playerCamera.transform.position, transform.position) <= interactRadius
-            && Input.GetKeyDown(interactKey))
+        bool inRange = HorizontalDistance(playerCamera.transform.position, transform.position) <= interactRadius;
+        SetPrompt(pressEText, inRange, "Press \"E\" to Open");
+
+        if (inRange && Input.GetKeyDown(interactKey))
         {
             bool isPlayerOutside = IsPlayerOutside();
 
@@ -144,10 +149,9 @@ public class EscapeDoor : MonoBehaviour
 
     IEnumerator ShowNeedKey()
     {
-        if (!needKeyText) { Debug.Log("Need a key"); yield break; }
-        needKeyText.SetActive(true);
-        yield return new WaitForSeconds(1.2f);
-        needKeyText.SetActive(false);
+        SetPrompt(needKeyText, true, "Need a key");
+        yield return new WaitForSecondsRealtime(1.2f);
+        SetPrompt(needKeyText, false, "Need a key");
         needKeyCo = null;
     }
 
@@ -216,7 +220,32 @@ public class EscapeDoor : MonoBehaviour
 
     void OnDisable()
     {
-        if (needKeyText) needKeyText.SetActive(false);
+        SetPrompt(pressEText, false, "Press \"E\" to Open");
+        SetPrompt(needKeyText, false, "Need a key");
+    }
+
+    void SetPrompt(GameObject root, bool visible, string message)
+    {
+        if (!root) return;
+
+        // cari TMP + CanvasGroup di dalam (punya kamu ada di child)
+        var tmp = root.GetComponentInChildren<TMP_Text>(true);
+        var cg  = root.GetComponentInChildren<CanvasGroup>(true);
+
+        if (tmp) tmp.text = message;
+
+        // kalau ada CanvasGroup: kontrol alpha (lebih aman daripada SetActive doang)
+        if (cg)
+        {
+            if (!root.activeSelf) root.SetActive(true);
+            cg.alpha = visible ? 1f : 0f;
+            cg.interactable = visible;
+            cg.blocksRaycasts = visible;
+        }
+        else
+        {
+            root.SetActive(visible);
+        }
     }
 
     void OnDrawGizmosSelected()

@@ -41,6 +41,9 @@ public class HantuJumpscare : MonoBehaviour
     Rigidbody playerRb;
     CharacterController playerCc;
     Transform camOriginalParent;
+    private HantuMove hantuMove;
+
+    public bool IsInProgress => done;   // done=true berarti jumpscare sudah dimulai
 
     void Awake()
     {
@@ -71,12 +74,17 @@ public class HantuJumpscare : MonoBehaviour
             playerCc = player.GetComponent<CharacterController>();
         }
 
+        hantuMove = GetComponent<HantuMove>();
+
         if (loseCanvas && loseCanvas.activeSelf) loseCanvas.SetActive(false);
     }
 
     void Update()
     {
         if (done || player == null || playerCamera == null) return;
+
+        var hm = GetComponent<HantuMove>();
+        if (hm != null && !hm.IsGhostActive()) return;   // hidden = ga bisa jumpscare
 
         if (Vector3.Distance(transform.position, player.position) <= triggerRadius)
             StartCoroutine(DoJumpscare());

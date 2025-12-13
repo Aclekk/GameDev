@@ -30,14 +30,19 @@ public class HantuMove : MonoBehaviour
 
     [Header("Lantern Detection")]
     public float lanternDetectionRadius = 10f;
-    public float gazeDetectionAngle = 30f;  // sudut untuk deteksi tatapan player
     public LayerMask playerLayer;
+
+    private HantuJumpscare _jumpscare;
 
     [Header("Audio")]
     public float audioTriggerRadius = 30f;
     public float audioMaxDistance = 35f;
     public float audioFadeSpeed = 6f;
     [Range(0f, 1f)] public float audioMaxVolume = 0.9f;
+
+    [Header("Lantern Hit SFX")]
+    public AudioClip hitByLanternClip;
+    [Range(0f, 1f)] public float hitByLanternVolume = 1f;
 
     // --- runtime ---
     private enum GhostState { Hidden, Spawning, Idle, Wandering, Disappearing }
@@ -48,6 +53,7 @@ public class HantuMove : MonoBehaviour
     private float _idleTimer;
     private bool _isMoving = false;
     private bool _suppressAudio = false;
+    private Collider[] _ghostColliders;
     
     [Header("Debug Info")]
     [SerializeField] private string debugState;
@@ -122,6 +128,12 @@ public class HantuMove : MonoBehaviour
         if (lanternController == null)
             lanternController = FindObjectOfType<LanternController>();
 
+        _jumpscare = GetComponent<HantuJumpscare>();
+
+        
+        // Cache colliders
+        _ghostColliders = GetComponentsInChildren<Collider>(true);
+
         // Start hidden
         if (startHidden && !debugImmediateSpawn)
         {
@@ -159,6 +171,15 @@ public class HantuMove : MonoBehaviour
         // Stop NavMeshAgent
         if (navMeshAgent)
             navMeshAgent.isStopped = true;
+
+        // Matikan jumpscare & collider saat hantu hidden
+        if (_jumpscare) _jumpscare.enabled = false;
+
+        if (_ghostColliders != null)
+        {
+            foreach (var c in _ghostColliders)
+                c.enabled = false;
+        }
     }
     
     void ShowGhostVisual()
@@ -176,6 +197,15 @@ public class HantuMove : MonoBehaviour
         // Resume NavMeshAgent
         if (navMeshAgent)
             navMeshAgent.isStopped = false;
+
+        // Hidupkan lagi jumpscare & collider saat hantu muncul
+        if (_jumpscare) _jumpscare.enabled = true;
+
+        if (_ghostColliders != null)
+        {
+            foreach (var c in _ghostColliders)
+                c.enabled = true;
+        }
     }
     
     // --- SPAWN SYSTEM ---
@@ -200,24 +230,51 @@ public class HantuMove : MonoBehaviour
         Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
         Debug.Log($"Selected spawn point: {spawnPoint.name} at position {spawnPoint.position}");
 
-        // Calculate spawn position with Y offset
-        Vector3 spawnPos = spawnPoint.position;
-        spawnPos.y += spawnYOffset;
+        // Calculate spawn position (kalau mau EXACT y, jangan tambah offset dulu)
+        Vector3 desired = spawnPoint.position; 
+        // kalau kamu MAU tetap pakai offset, pakai ini:
+        // desired += Vector3.up * spawnYOffset;
 
-        // Use NavMeshAgent.Warp for proper NavMesh positioning
         if (navMeshAgent != null)
         {
-            navMeshAgent.Warp(spawnPos);
-            Debug.Log($"Ghost warped to NavMesh position: {spawnPos}");
+            // stop + reset path biar gak lanjut jalan dari path lama
+            navMeshAgent.isStopped = true;
+            navMeshAgent.ResetPath();
+            navMeshAgent.velocity = Vector3.zero;
+
+            // coba warp exact
+            bool warped = navMeshAgent.Warp(desired);
+
+            // kalau gagal, cari titik navmesh terdekat dari spawnPoint
+            if (!warped)
+            {
+                NavMeshHit hit;
+                if (NavMesh.SamplePosition(spawnPoint.position, out hit, 2f, NavMesh.AllAreas))
+                {
+                    navMeshAgent.Warp(hit.position);
+                    desired = hit.position;
+                }
+                else
+                {
+                    // last resort (kalau navmesh bener-bener gak ada di area itu)
+                    transform.position = desired;
+                }
+            }
         }
         else
         {
-            transform.position = spawnPos;
-            Debug.Log($"Ghost positioned at: {spawnPos}");
+            transform.position = desired;
         }
         
         // Show ghost visual and start spawning
         ShowGhostVisual();
+        
+        if (navMeshAgent)
+        {
+            navMeshAgent.ResetPath();
+            navMeshAgent.isStopped = true; // tahan dulu selama appear
+        }
+        
         Debug.Log("Ghost visual shown, starting spawn sequence");
         StartCoroutine(SpawnSequence());
     }
@@ -233,7 +290,7 @@ public class HantuMove : MonoBehaviour
         // Wait for animation to finish
         yield return new WaitForSeconds(1f);
         
-        // Start wandering after spawn
+        if (navMeshAgent) navMeshAgent.isStopped = false;
         StartWandering();
     }
 
@@ -282,11 +339,20 @@ public class HantuMove : MonoBehaviour
             return;
         }
 
-        // Check for lantern detection and player gaze
-        if (_currentState != GhostState.Hidden && _currentState != GhostState.Disappearing)
+        bool jumpscareActive = (_jumpscare != null && _jumpscare.IsInProgress);
+
+        // saat jumpscare: jangan boleh despawn gara2 "kamera auto natap"
+        if (!jumpscareActive && _currentState != GhostState.Hidden && _currentState != GhostState.Disappearing)
         {
-            if (IsInLanternRadius() && IsPlayerLookingAtGhost())
+            if (IsInLanternRadius())
             {
+                // stop crawl loop biar ga tabrakan sama sfx cahaya
+                ForceStopFootstepAudio();
+
+                // bunyi kena cahaya (pakai PlayClipAtPoint biar ga ikut ke-stop)
+                if (hitByLanternClip != null)
+                    AudioSource.PlayClipAtPoint(hitByLanternClip, transform.position, hitByLanternVolume);
+
                 StartCoroutine(DisappearSequence());
                 return;
             }
@@ -379,23 +445,18 @@ public class HantuMove : MonoBehaviour
     // --- DETECTION SYSTEM ---
     bool IsInLanternRadius()
     {
-        if (lanternController == null || player == null) return false;
-        
-        float distance = Vector3.Distance(transform.position, player.position);
-        return distance <= lanternDetectionRadius && lanternController.IsOn;
+        if (lanternController == null || !lanternController.IsOn) return false;
+
+        // origin cahaya: posisi light lantern (paling akurat)
+        Vector3 origin = (lanternController.lanternLight != null)
+            ? lanternController.lanternLight.transform.position
+            : (player != null ? player.position : transform.position);
+
+        float distance = Vector3.Distance(transform.position, origin);
+        return distance <= lanternDetectionRadius;
     }
 
-    bool IsPlayerLookingAtGhost()
-    {
-        if (player == null) return false;
-
-        Vector3 directionToGhost = (transform.position - player.position).normalized;
-        float dotProduct = Vector3.Dot(player.forward, directionToGhost);
-        float angle = Mathf.Acos(dotProduct) * Mathf.Rad2Deg;
-
-        return angle <= gazeDetectionAngle;
-    }
-
+    
     // --- ANIMATION & AUDIO ---
     void UpdateAnimator()
     {
