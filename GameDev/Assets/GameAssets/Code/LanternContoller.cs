@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -19,13 +19,13 @@ public class LanternController : MonoBehaviour
     [Header("Stat Minyak (Oil)")]
     public float maxOil = 100f;
     public float currentOil = 100f;
-    public float consumptionPerSecond = 1.0f;
+    public float consumptionPerSecond = 1.5f;
 
     [Header("Lampu")]
     public float maxIntensity = 2.2f;
-    public float minIntensity = 0.0f;
-    public float maxRange = 100f;
-    public float minRange = 0f;
+    public float minIntensity = 0.3f;
+    public float maxRange = 8f;
+    public float minRange = 2f;
 
     [Header("Input")]
     public KeyCode toggleKey = KeyCode.F;
@@ -42,6 +42,10 @@ public class LanternController : MonoBehaviour
     Coroutine blinkCo;
 
     public bool IsOn { get; private set; } = false;
+
+    public bool IsLit => IsOn && currentOil > 0f && lanternLight != null && lanternLight.enabled;
+
+    public float CurrentLightRange => (lanternLight != null && lanternLight.enabled) ? lanternLight.range : 0f;
 
     void Start()
     {
@@ -63,6 +67,9 @@ public class LanternController : MonoBehaviour
         // Toggle lampu
         if (Input.GetKeyDown(toggleKey))
             SetLantern(!IsOn);
+
+        if (IsOn && currentOil <= 0f)
+            SetLantern(false);
 
         // Oil consumption
         if (IsOn && currentOil > 0f)
@@ -87,6 +94,9 @@ public class LanternController : MonoBehaviour
 
     void SetLantern(bool on, bool instant = false)
     {
+        if (on && currentOil <= 0f)
+            on = false;
+
         if (IsOn == on && !instant) return;
 
         IsOn = on;
@@ -116,12 +126,14 @@ public class LanternController : MonoBehaviour
 
         lanternLight.enabled = true;
 
-        float t = Mathf.Clamp01(currentOil / maxOil);
+        float oilPercent = Mathf.Clamp01(currentOil / maxOil);
+        float intensityCurve = Mathf.Pow(oilPercent, 0.7f);
+        float rangeCurve = Mathf.Pow(oilPercent, 0.5f);
 
-        lanternLight.intensity = Mathf.Lerp(minIntensity, maxIntensity, t);
-        lanternLight.range = Mathf.Lerp(minRange, maxRange, t);
+        lanternLight.intensity = Mathf.Lerp(minIntensity, maxIntensity, intensityCurve);
+        lanternLight.range = Mathf.Lerp(minRange, maxRange, rangeCurve);
 
-        OnOilPercentChanged?.Invoke(t);
+        OnOilPercentChanged?.Invoke(oilPercent);
     }
 
     // ==============================

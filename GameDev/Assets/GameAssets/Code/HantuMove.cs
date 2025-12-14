@@ -17,19 +17,25 @@ public class HantuMove : MonoBehaviour
     public float wanderSpeed = 2f;
     public float chaseSpeed = 4f;
     public float wanderRadius = 15f;
-    public float idleChance = 0.3f;         // 30% chance to idle when reaching destination
+    public float idleChance = 0.3f;
     public float idleDuration = 2f;
 
     [Header("Spawn System")]
-    public Transform[] spawnPoints;         // movepoint 1-4
+    public Transform[] spawnPoints;
     public float minSpawnTime = 30f;
     public float maxSpawnTime = 70f;
     public bool startHidden = true;
-    public bool debugImmediateSpawn = false; // Set to true for testing
-    public float spawnYOffset = 1f;         // Offset to prevent sinking into ground
+    public bool debugImmediateSpawn = false;
+
+    [Header("Stuck Detection")]
+    public float stuckCheckInterval = 2f;
+    public float stuckVelocityThreshold = 0.1f;
+    public int maxPathRetries = 5;
 
     [Header("Lantern Detection")]
-    public float lanternDetectionRadius = 10f;
+    public float maxDetectionRadius = 8f;
+    public float minDetectionRadius = 2f;
+    public bool useDynamicDetection = true;
     public LayerMask playerLayer;
 
     private HantuJumpscare _jumpscare;
@@ -44,7 +50,6 @@ public class HantuMove : MonoBehaviour
     public AudioClip hitByLanternClip;
     [Range(0f, 1f)] public float hitByLanternVolume = 1f;
 
-    // --- runtime ---
     private enum GhostState { Hidden, Spawning, Idle, Wandering, Disappearing }
     private GhostState _currentState = GhostState.Hidden;
     private Vector3 _wanderTarget;
@@ -54,6 +59,9 @@ public class HantuMove : MonoBehaviour
     private bool _isMoving = false;
     private bool _suppressAudio = false;
     private Collider[] _ghostColliders;
+    private float _stuckCheckTimer;
+    private Vector3 _lastPosition;
+    private int _pathRetryCount;
     
     [Header("Debug Info")]
     [SerializeField] private string debugState;
@@ -62,7 +70,6 @@ public class HantuMove : MonoBehaviour
 
     void Awake()
     {
-        // Setup NavMesh Agent
         if (navMeshAgent == null)
             navMeshAgent = GetComponent<NavMeshAgent>();
         
@@ -71,9 +78,18 @@ public class HantuMove : MonoBehaviour
             navMeshAgent.speed = wanderSpeed;
             navMeshAgent.stoppingDistance = 0.5f;
             navMeshAgent.autoBraking = true;
+            navMeshAgent.acceleration = 8f;
+            navMeshAgent.angularSpeed = 120f;
+            navMeshAgent.radius = 0.5f;
+            navMeshAgent.height = 2f;
+            navMeshAgent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+            navMeshAgent.avoidancePriority = 50;
+        }
+        else
+        {
+            Debug.LogError("NavMeshAgent component tidak ditemukan pada Hantu!");
         }
 
-        // Setup spawn points
         if (spawnPoints == null || spawnPoints.Length == 0)
         {
             var mp = GameObject.Find("Movepoint");
@@ -83,34 +99,10 @@ public class HantuMove : MonoBehaviour
                 for (int i = 0; i < mp.transform.childCount; i++)
                     list.Add(mp.transform.GetChild(i));
                 spawnPoints = list.ToArray();
-                Debug.Log($"Found {spawnPoints.Length} spawn points from Movepoint object");
+                Debug.Log($"Found {spawnPoints.Length} spawn points from Movepoint");
             }
-            else
-            {
-                Debug.LogError("Movepoint object not found! Please create a Movepoint parent object with child spawn points.");
-                // Try to find any GameObject with "movepoint" in name as fallback
-                GameObject[] allObjects = FindObjectsOfType<GameObject>();
-                var fallbackList = new List<Transform>();
-                foreach (GameObject obj in allObjects)
-                {
-                    if (obj.name.ToLower().Contains("movepoint") || obj.name.ToLower().Contains("spawn"))
-                    {
-                        fallbackList.Add(obj.transform);
-                    }
-                }
-                if (fallbackList.Count > 0)
-                {
-                    spawnPoints = fallbackList.ToArray();
-                    Debug.Log($"Fallback: Found {spawnPoints.Length} spawn points from objects containing 'movepoint' or 'spawn'");
-                }
-            }
-        }
-        else
-        {
-            Debug.Log($"Using assigned spawn points: {spawnPoints.Length} points");
         }
 
-        // Setup audio
         if (audioSource)
         {
             audioSource.clip = crawlClip;
@@ -124,55 +116,50 @@ public class HantuMove : MonoBehaviour
             audioSource.volume = 0f;
         }
 
-        // Find lantern controller if not assigned
         if (lanternController == null)
             lanternController = FindObjectOfType<LanternController>();
 
         _jumpscare = GetComponent<HantuJumpscare>();
-
-        
-        // Cache colliders
         _ghostColliders = GetComponentsInChildren<Collider>(true);
 
-        // Start hidden
         if (startHidden && !debugImmediateSpawn)
         {
-            _currentState = GhostState.Hidden;
-            // gameObject.SetActive(false);   // Fixed: Keep object active so Update runs
-            HideGhostVisual(); // Hide visual instead of deactivating
-            ScheduleNextSpawn();
+            Hide();
         }
-        else
+        else if (debugImmediateSpawn)
         {
-            Debug.Log("Starting immediate spawn (debug mode or startHidden=false)");
             SpawnGhost();
         }
     }
 
     void OnDisable()
     {
-        // kalau script dimatikan, hentikan suara supaya tidak terus bunyi
         ForceStopFootstepAudio();
     }
 
-    // --- VISUAL HIDING ---
+    void Hide()
+    {
+        _currentState = GhostState.Hidden;
+        HideGhostVisual();
+        ScheduleNextSpawn();
+    }
+
     void HideGhostVisual()
     {
-        // Hide mesh renderer
         var renderer = GetComponent<Renderer>();
         if (renderer != null)
             renderer.enabled = false;
         
-        // Hide all child renderers
         var childRenderers = GetComponentsInChildren<Renderer>();
         foreach (var childRenderer in childRenderers)
             childRenderer.enabled = false;
         
-        // Stop NavMeshAgent
-        if (navMeshAgent)
+        if (navMeshAgent && navMeshAgent.isOnNavMesh)
+        {
             navMeshAgent.isStopped = true;
+            navMeshAgent.ResetPath();
+        }
 
-        // Matikan jumpscare & collider saat hantu hidden
         if (_jumpscare) _jumpscare.enabled = false;
 
         if (_ghostColliders != null)
@@ -184,21 +171,29 @@ public class HantuMove : MonoBehaviour
     
     void ShowGhostVisual()
     {
-        // Show mesh renderer
         var renderer = GetComponent<Renderer>();
         if (renderer != null)
             renderer.enabled = true;
         
-        // Show all child renderers
         var childRenderers = GetComponentsInChildren<Renderer>();
         foreach (var childRenderer in childRenderers)
             childRenderer.enabled = true;
         
-        // Resume NavMeshAgent
         if (navMeshAgent)
+        {
+            if (!navMeshAgent.isOnNavMesh)
+            {
+                NavMeshHit hit;
+                if (NavMesh.SamplePosition(transform.position, out hit, 5f, NavMesh.AllAreas))
+                {
+                    navMeshAgent.enabled = false;
+                    transform.position = hit.position;
+                    navMeshAgent.enabled = true;
+                }
+            }
             navMeshAgent.isStopped = false;
+        }
 
-        // Hidupkan lagi jumpscare & collider saat hantu muncul
         if (_jumpscare) _jumpscare.enabled = true;
 
         if (_ghostColliders != null)
@@ -222,60 +217,52 @@ public class HantuMove : MonoBehaviour
         
         if (spawnPoints == null || spawnPoints.Length == 0)
         {
-            Debug.LogWarning("No spawn points available!");
+            Debug.LogError("No spawn points available! Add movepoint objects.");
             return;
         }
 
-        // Choose random spawn point
-        Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
-        Debug.Log($"Selected spawn point: {spawnPoint.name} at position {spawnPoint.position}");
-
-        // Calculate spawn position (kalau mau EXACT y, jangan tambah offset dulu)
-        Vector3 desired = spawnPoint.position; 
-        // kalau kamu MAU tetap pakai offset, pakai ini:
-        // desired += Vector3.up * spawnYOffset;
-
-        if (navMeshAgent != null)
+        if (navMeshAgent == null)
         {
-            // stop + reset path biar gak lanjut jalan dari path lama
-            navMeshAgent.isStopped = true;
-            navMeshAgent.ResetPath();
-            navMeshAgent.velocity = Vector3.zero;
+            Debug.LogError("NavMeshAgent is null! Cannot spawn ghost.");
+            return;
+        }
 
-            // coba warp exact
-            bool warped = navMeshAgent.Warp(desired);
+        Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
+        Debug.Log($"Selected spawn point: {spawnPoint.name}");
 
-            // kalau gagal, cari titik navmesh terdekat dari spawnPoint
-            if (!warped)
-            {
-                NavMeshHit hit;
-                if (NavMesh.SamplePosition(spawnPoint.position, out hit, 2f, NavMesh.AllAreas))
-                {
-                    navMeshAgent.Warp(hit.position);
-                    desired = hit.position;
-                }
-                else
-                {
-                    // last resort (kalau navmesh bener-bener gak ada di area itu)
-                    transform.position = desired;
-                }
-            }
+        Vector3 targetPosition = spawnPoint.position;
+        NavMeshHit navHit;
+
+        if (NavMesh.SamplePosition(targetPosition, out navHit, 5f, NavMesh.AllAreas))
+        {
+            targetPosition = navHit.position;
         }
         else
         {
-            transform.position = desired;
+            Debug.LogWarning($"Spawn point {spawnPoint.name} tidak di NavMesh, mencari terdekat...");
+            for (float radius = 10f; radius <= 30f; radius += 5f)
+            {
+                if (NavMesh.SamplePosition(spawnPoint.position, out navHit, radius, NavMesh.AllAreas))
+                {
+                    targetPosition = navHit.position;
+                    Debug.Log($"Found NavMesh dalam radius {radius}m");
+                    break;
+                }
+            }
         }
-        
-        // Show ghost visual and start spawning
+
+        navMeshAgent.enabled = false;
+        transform.position = targetPosition;
+        transform.rotation = spawnPoint.rotation;
+        navMeshAgent.enabled = true;
+
+        navMeshAgent.isStopped = true;
+        navMeshAgent.ResetPath();
+        navMeshAgent.velocity = Vector3.zero;
+
         ShowGhostVisual();
         
-        if (navMeshAgent)
-        {
-            navMeshAgent.ResetPath();
-            navMeshAgent.isStopped = true; // tahan dulu selama appear
-        }
-        
-        Debug.Log("Ghost visual shown, starting spawn sequence");
+        Debug.Log($"Ghost spawned at {transform.position}");
         StartCoroutine(SpawnSequence());
     }
 
@@ -297,6 +284,17 @@ public class HantuMove : MonoBehaviour
     IEnumerator DisappearSequence()
     {
         _currentState = GhostState.Disappearing;
+        
+        // >>> PATCH: matiin jumpscare radius saat kena lantern / mau hilang
+        if (_jumpscare) _jumpscare.enabled = false;     // stop HantuJumpscare.Update
+        _isMoving = false;                              // paksa anim idle
+
+        // opsional tapi aman: matiin collider selama transisi (biar gak ada trigger aneh)
+        if (_ghostColliders != null)
+        {
+            foreach (var c in _ghostColliders)
+                c.enabled = false;
+        }
         
         // Stop movement
         if (navMeshAgent)
@@ -391,47 +389,152 @@ public class HantuMove : MonoBehaviour
 
     void SetNewWanderTarget()
     {
-        if (navMeshAgent == null) return;
-
-        // Random chance to idle
-        if (Random.value < idleChance)
+        if (navMeshAgent == null || !navMeshAgent.isOnNavMesh)
         {
-            StartIdle();
+            Debug.LogWarning("NavMeshAgent tidak ada atau tidak di NavMesh!");
             return;
         }
 
-        // Find random position on NavMesh
-        Vector3 randomDirection = Random.insideUnitSphere * wanderRadius;
-        randomDirection += transform.position;
-        
-        NavMeshHit hit;
-        if (NavMesh.SamplePosition(randomDirection, out hit, wanderRadius, NavMesh.AllAreas))
+        for (int i = 0; i < 30; i++)
         {
-            _wanderTarget = hit.position;
-            navMeshAgent.SetDestination(_wanderTarget);
-            navMeshAgent.isStopped = false;
+            Vector3 randomDirection = Random.insideUnitSphere * wanderRadius;
+            randomDirection += transform.position;
+
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(randomDirection, out hit, wanderRadius, NavMesh.AllAreas))
+            {
+                NavMeshPath path = new NavMeshPath();
+                if (navMeshAgent.CalculatePath(hit.position, path) && path.status == NavMeshPathStatus.PathComplete)
+                {
+                    _wanderTarget = hit.position;
+                    navMeshAgent.isStopped = false;
+                    navMeshAgent.SetDestination(_wanderTarget);
+                    return;
+                }
+            }
         }
+        
+        Debug.LogWarning("Tidak bisa menemukan wander target yang valid setelah 30 percobaan");
     }
 
     void HandleWandering()
     {
         if (navMeshAgent == null) return;
 
-        _isMoving = navMeshAgent.remainingDistance > navMeshAgent.stoppingDistance;
-
-        // Check if reached destination
-        if (!_isMoving && navMeshAgent.hasPath)
+        if (!navMeshAgent.isOnNavMesh)
         {
-            // Random chance to idle or set new target
-            if (Random.value < idleChance)
+            Debug.LogWarning("Hantu tidak di NavMesh! Mencoba reposisi...");
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(transform.position, out hit, 5f, NavMesh.AllAreas))
             {
-                StartIdle();
+                navMeshAgent.enabled = false;
+                transform.position = hit.position;
+                navMeshAgent.enabled = true;
+                Debug.Log("Hantu direposisi ke NavMesh");
             }
-            else
+            return;
+        }
+
+        _isMoving = navMeshAgent.velocity.sqrMagnitude > 0.1f;
+
+        CheckIfStuck();
+
+        if (!navMeshAgent.pathPending)
+        {
+            if (navMeshAgent.remainingDistance <= navMeshAgent.stoppingDistance)
             {
+                if (!navMeshAgent.hasPath || navMeshAgent.velocity.sqrMagnitude < 0.01f)
+                {
+                    if (Random.value < idleChance)
+                    {
+                        StartIdle();
+                    }
+                    else
+                    {
+                        SetNewWanderTarget();
+                    }
+                }
+            }
+            else if (navMeshAgent.pathStatus == NavMeshPathStatus.PathInvalid)
+            {
+                Debug.LogWarning("Path invalid, mencari target baru");
                 SetNewWanderTarget();
             }
         }
+    }
+
+    void CheckIfStuck()
+    {
+        _stuckCheckTimer += Time.deltaTime;
+
+        if (_stuckCheckTimer >= stuckCheckInterval)
+        {
+            _stuckCheckTimer = 0f;
+
+            if (navMeshAgent.hasPath && !navMeshAgent.isStopped)
+            {
+                float distMoved = Vector3.Distance(transform.position, _lastPosition);
+                
+                if (distMoved < stuckVelocityThreshold)
+                {
+                    _pathRetryCount++;
+                    Debug.LogWarning($"Hantu stuck! (moved only {distMoved}m) Retry #{_pathRetryCount}");
+
+                    if (_pathRetryCount >= maxPathRetries)
+                    {
+                        Debug.LogWarning("Max retries reached, teleporting to new position");
+                        TeleportToRandomNavMeshPosition();
+                        _pathRetryCount = 0;
+                    }
+                    else
+                    {
+                        SetNewWanderTarget();
+                    }
+                }
+                else
+                {
+                    _pathRetryCount = 0;
+                }
+            }
+
+            _lastPosition = transform.position;
+        }
+    }
+
+    void TeleportToRandomNavMeshPosition()
+    {
+        Vector3 newPos = FindNavMeshNearPosition(transform.position, wanderRadius * 2f);
+        if (newPos != Vector3.zero)
+        {
+            navMeshAgent.enabled = false;
+            transform.position = newPos;
+            navMeshAgent.enabled = true;
+            SetNewWanderTarget();
+            Debug.Log($"Teleported hantu to {newPos}");
+        }
+    }
+
+    Vector3 FindNavMeshNearPosition(Vector3 center, float radius)
+    {
+        for (int attempt = 0; attempt < 30; attempt++)
+        {
+            Vector2 randomCircle = Random.insideUnitCircle * radius;
+            Vector3 randomPoint = center + new Vector3(randomCircle.x, 0f, randomCircle.y);
+            
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(randomPoint, out hit, 10f, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
+        }
+        
+        NavMeshHit fallbackHit;
+        if (NavMesh.SamplePosition(center, out fallbackHit, radius, NavMesh.AllAreas))
+        {
+            return fallbackHit.position;
+        }
+        
+        return Vector3.zero;
     }
 
     void StartIdle()
@@ -443,17 +546,44 @@ public class HantuMove : MonoBehaviour
     }
 
     // --- DETECTION SYSTEM ---
-    bool IsInLanternRadius()
+    public bool IsInLanternRadius()
     {
-        if (lanternController == null || !lanternController.IsOn) return false;
+        if (lanternController == null || !lanternController.IsLit) return false;
 
-        // origin cahaya: posisi light lantern (paling akurat)
         Vector3 origin = (lanternController.lanternLight != null)
             ? lanternController.lanternLight.transform.position
             : (player != null ? player.position : transform.position);
 
+        float effectiveRadius = maxDetectionRadius;
+
+        if (useDynamicDetection && lanternController != null)
+        {
+            float oilPercent = Mathf.Clamp01(lanternController.currentOil / lanternController.maxOil);
+            float radiusCurve = Mathf.Pow(oilPercent, 0.5f);
+            effectiveRadius = Mathf.Lerp(minDetectionRadius, maxDetectionRadius, radiusCurve);
+        }
+
+        if (effectiveRadius <= 0f) return false;
+
         float distance = Vector3.Distance(transform.position, origin);
-        return distance <= lanternDetectionRadius;
+        
+        bool inRadius = distance <= effectiveRadius;
+
+        return inRadius;
+    }
+    
+    public float GetCurrentDetectionRadius()
+    {
+        if (lanternController == null || !lanternController.IsLit) return 0f;
+
+        if (useDynamicDetection && lanternController != null)
+        {
+            float oilPercent = Mathf.Clamp01(lanternController.currentOil / lanternController.maxOil);
+            float radiusCurve = Mathf.Pow(oilPercent, 0.5f);
+            return Mathf.Lerp(minDetectionRadius, maxDetectionRadius, radiusCurve);
+        }
+
+        return maxDetectionRadius;
     }
 
     
@@ -461,8 +591,14 @@ public class HantuMove : MonoBehaviour
     void UpdateAnimator()
     {
         if (animator == null) return;
-        
-        // Set crawling animation based on movement
+
+        // Saat spawning / disappearing: paksa idle
+        if (_currentState == GhostState.Spawning || _currentState == GhostState.Disappearing)
+        {
+            animator.SetBool("isCrawl", false);
+            return;
+        }
+
         animator.SetBool("isCrawl", _isMoving);
     }
 
@@ -534,15 +670,17 @@ public class HantuMove : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        // Lantern detection radius
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, lanternDetectionRadius);
+        float currentRadius = GetCurrentDetectionRadius();
         
-        // Wandering radius
+        Gizmos.color = Color.yellow;
+        if (currentRadius > 0f)
+            Gizmos.DrawWireSphere(transform.position, currentRadius);
+        else
+            Gizmos.DrawWireSphere(transform.position, maxDetectionRadius);
+        
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, wanderRadius);
         
-        // Audio radius
         Gizmos.color = new Color(0f, 1f, 0f, 0.6f);
         Gizmos.DrawWireSphere(transform.position, audioTriggerRadius);
         Gizmos.color = new Color(0f, 1f, 0f, 0.25f);
