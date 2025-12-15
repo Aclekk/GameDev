@@ -5,9 +5,10 @@ using TMPro;
 public class EscapeDoor : MonoBehaviour
 {
     [Header("Key & UI")]
-    public string requiredKeyId = "BasementKey";
+    public string mainKeyId = "MainKey";
+    public string escapeKeyId = "EscapeKey";
     public GameObject needKeyText;      
-    public GameObject pressEText;          // <-- DRAG "Press E" ke sini
+    public GameObject pressEText;
     public GameObject winCanvas;        
 
     [Header("Player Refs")]
@@ -84,11 +85,19 @@ public class EscapeDoor : MonoBehaviour
 
             if (isPlayerOutside)
             {
-                StartCoroutine(EnterHouse());
+                if (!inventory.HasKey(mainKeyId))
+                {
+                    if (needKeyCo != null) StopCoroutine(needKeyCo);
+                    needKeyCo = StartCoroutine(ShowNeedKey());
+                }
+                else
+                {
+                    StartCoroutine(EnterHouse());
+                }
             }
             else
             {
-                if (!inventory.HasKey(requiredKeyId))
+                if (!inventory.HasKey(escapeKeyId))
                 {
                     if (needKeyCo != null) StopCoroutine(needKeyCo);
                     needKeyCo = StartCoroutine(ShowNeedKey());

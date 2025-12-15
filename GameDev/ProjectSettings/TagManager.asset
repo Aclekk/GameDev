@@ -4,8 +4,17 @@
 TagManager:
   serializedVersion: 2
   tags:
-  - EscapeDoor
-  - wood
+  - CinemachineTarget
+  - Item
+  - Demon
+  - Baby
+  - Sunak
+  - Enemy
+  - FlickableObject
+  - UIItem
+  - SunakPoint
+  - HorrorItem
+  - Bullet
   layers:
   - Default
   - TransparentFX
@@ -15,9 +24,9 @@ TagManager:
   - UI
   - 
   - 
-  - 
-  - 
-  - 
+  - Character
+  - Ground
+  - Demon
   - 
   - 
   - 

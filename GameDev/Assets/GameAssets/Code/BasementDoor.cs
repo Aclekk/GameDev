@@ -1,8 +1,12 @@
 using System.Collections;
 using UnityEngine;
+using TMPro;
 
 public class BasementDoor : MonoBehaviour
 {
+    [Header("UI")]
+    public GameObject pressEText;
+
     [Header("Player Refs")]
     public Transform player;
     public Camera playerCamera;
@@ -35,15 +39,18 @@ public class BasementDoor : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
             audioSource.playOnAwake = false;
         }
+
+        SetPrompt(pressEText, false, "Press \"E\" to Open");
     }
 
     void Update()
     {
-        // Hitung center interaksi (bisa digeser XYZ)
         Vector3 interactCenter = transform.position + transform.TransformDirection(interactOffset);
+        bool inRange = Vector3.Distance(playerCamera.transform.position, interactCenter) <= interactRadius;
 
-        if (Vector3.Distance(playerCamera.transform.position, interactCenter) <= interactRadius
-            && Input.GetKeyDown(interactKey))
+        SetPrompt(pressEText, inRange, "Press \"E\" to Open");
+
+        if (inRange && Input.GetKeyDown(interactKey))
         {
             if (IsPlayerOutside())
                 StartCoroutine(EnterBasement());
@@ -107,12 +114,10 @@ public class BasementDoor : MonoBehaviour
 
     void OnDrawGizmosSelected()
     {
-        // Gizmo untuk interaksi
         Gizmos.color = Color.cyan;
         Vector3 interactCenter = transform.position + transform.TransformDirection(interactOffset);
         Gizmos.DrawWireSphere(interactCenter, interactRadius);
 
-        // Gizmo teleport
         if (insidePoint)
         {
             Gizmos.color = Color.green;
@@ -123,6 +128,33 @@ public class BasementDoor : MonoBehaviour
         {
             Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(outsideCheckPoint.position, checkDistance);
+        }
+    }
+
+    void OnDisable()
+    {
+        SetPrompt(pressEText, false, "Press \"E\" to Open");
+    }
+
+    void SetPrompt(GameObject root, bool visible, string message)
+    {
+        if (!root) return;
+
+        var tmp = root.GetComponentInChildren<TMP_Text>(true);
+        var cg = root.GetComponentInChildren<CanvasGroup>(true);
+
+        if (tmp) tmp.text = message;
+
+        if (cg)
+        {
+            if (!root.activeSelf) root.SetActive(true);
+            cg.alpha = visible ? 1f : 0f;
+            cg.interactable = visible;
+            cg.blocksRaycasts = visible;
+        }
+        else
+        {
+            root.SetActive(visible);
         }
     }
 }

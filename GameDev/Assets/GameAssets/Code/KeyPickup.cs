@@ -4,6 +4,7 @@ public class KeyPickup : MonoBehaviour
 {
     public string keyId = "Key";
     public float pickupRadius = 1.5f;
+    public AudioClip pickupSound;
 
     Transform playerCam;
     Inventory inventory;
@@ -21,12 +22,22 @@ public class KeyPickup : MonoBehaviour
     {
         if (!playerCam || !inventory) return;
 
-        // cek jarak HORIZONTAL saja (abaikan perbedaan tinggi Y)
         if (HorizontalDistance(playerCam.position, transform.position) <= pickupRadius)
         {
-            inventory.AddKey(keyId);
-            Destroy(gameObject);
+            PickupKey();
         }
+    }
+
+    void PickupKey()
+    {
+        inventory.AddKey(keyId);
+
+        if (pickupSound)
+        {
+            AudioSource.PlayClipAtPoint(pickupSound, transform.position);
+        }
+
+        Destroy(gameObject);
     }
 
     static float HorizontalDistance(Vector3 a, Vector3 b)
