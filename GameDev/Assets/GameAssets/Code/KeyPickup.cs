@@ -6,23 +6,37 @@ public class KeyPickup : MonoBehaviour
     public float pickupRadius = 1.5f;
     public AudioClip pickupSound;
 
-    Transform playerCam;
+    Transform playerBody;
     Inventory inventory;
 
     void Start()
     {
-        playerCam = Camera.main ? Camera.main.transform : null;
-        if (!playerCam) { Debug.LogError("[KeyPickup] Camera.main tidak ditemukan."); enabled = false; return; }
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        if (!playerObj)
+        {
+            Debug.LogError("[KeyPickup] Player dengan tag 'Player' tidak ditemukan!");
+            enabled = false;
+            return;
+        }
 
-        inventory = playerCam.GetComponentInParent<Inventory>();
-        if (!inventory) { Debug.LogError("[KeyPickup] Inventory tidak ditemukan di parent Player."); enabled = false; return; }
+        inventory = playerObj.GetComponent<Inventory>();
+        if (!inventory) 
+        { 
+            Debug.LogError($"[KeyPickup] Inventory tidak ditemukan di {playerObj.name}!"); 
+            enabled = false; 
+            return;
+        }
+
+        playerBody = playerObj.transform;
     }
 
     void Update()
     {
-        if (!playerCam || !inventory) return;
+        if (!playerBody || !inventory) return;
 
-        if (HorizontalDistance(playerCam.position, transform.position) <= pickupRadius)
+        float distance = HorizontalDistance(playerBody.position, transform.position);
+        
+        if (distance <= pickupRadius)
         {
             PickupKey();
         }

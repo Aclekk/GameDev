@@ -1,55 +1,73 @@
 using UnityEngine;
 using Michsky.UI.Dark;
+using UHFPS.Runtime;
 
 public class PauseManager : MonoBehaviour
 {
     [Header("References")]
-    public GameObject pausedCanvas;              // drag GameObject "Paused"
-    public FirstPersonController playerController; // drag script gerak di Player
-    public MainPanelManager panelManager;        // drag MainPanelManager dari "Paused"
-    public ModalWindowManager exitModal;         // drag ModalWindowManager dari exit window
+    public GameObject pausedCanvas;
+    public MainPanelManager panelManager;
+    public ModalWindowManager exitModal;
 
     private bool isPaused = false;
     private bool isExitModalActive = false;
 
     void Start()
     {
-        // Pastikan canvas mati di awal
         if (pausedCanvas != null)
         {
             pausedCanvas.SetActive(false);
         }
 
-        // Kondisi main game
+        DisableUHFPSPauseAndInventory();
+
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
 
+    private void DisableUHFPSPauseAndInventory()
+    {
+        if (GameManager.HasReference)
+        {
+            GameManager gameManager = GameManager.Instance;
+            
+            if (gameManager.PausePanel != null)
+            {
+                gameManager.PausePanel.gameObject.SetActive(false);
+            }
+
+            if (gameManager.InventoryPanel != null)
+            {
+                gameManager.InventoryPanel.gameObject.SetActive(false);
+            }
+
+            if (gameManager.TabPanel != null)
+            {
+                gameManager.TabPanel.gameObject.SetActive(false);
+            }
+        }
+    }
+
     void Update()
     {
-        // Cek ESC
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (isPaused)
             {
-                // Prioritas 1: Jika exit modal aktif, tutup modal
                 if (isExitModalActive)
                 {
                     CloseExitModal();
                 }
-                // Prioritas 2: Jika di panel selain home (index > 0), kembali ke home
                 else if (panelManager != null && panelManager.currentPanelIndex > 0)
                 {
-                    panelManager.PanelAnim(0); // Kembali ke home panel
+                    panelManager.PanelAnim(0);
                 }
-                // Prioritas 3: Jika di home panel, BUKA EXIT MODAL (bukan resume)
                 else if (panelManager != null && panelManager.currentPanelIndex == 0)
                 {
-                    ShowExitModal(); // Buka exit modal
+                    ShowExitModal();
                 }
                 else
                 {
-                    // Fallback jika panelManager null
                     ResumeGame();
                 }
             }
@@ -66,11 +84,9 @@ public class PauseManager : MonoBehaviour
 
         if (pausedCanvas != null)
         {
-            // Matikan dulu, hidupkan lagi biar animasi di canvas ke-reset
             pausedCanvas.SetActive(false);
             pausedCanvas.SetActive(true);
             
-            // Reset ke home panel saat pause
             if (panelManager != null)
             {
                 panelManager.currentPanelIndex = 0;
@@ -78,11 +94,15 @@ public class PauseManager : MonoBehaviour
             }
         }
 
-        // Player nggak bisa gerak
-        if (playerController != null)
-            playerController.enabled = false;
+        if (GameManager.HasReference)
+        {
+            GameManager gameManager = GameManager.Instance;
+            if (gameManager.PlayerPresence != null && gameManager.PlayerPresence.PlayerIsUnlocked)
+            {
+                gameManager.PlayerPresence.FreezePlayer(true, true);
+            }
+        }
 
-        // Cursor bebas buat klik UI
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
@@ -91,26 +111,27 @@ public class PauseManager : MonoBehaviour
     {
         isPaused = false;
 
-        // Sembunyikan menu pause
         if (pausedCanvas != null)
             pausedCanvas.SetActive(false);
 
-        // Player bisa gerak lagi
-        if (playerController != null)
-            playerController.enabled = true;
+        if (GameManager.HasReference)
+        {
+            GameManager gameManager = GameManager.Instance;
+            if (gameManager.PlayerPresence != null && gameManager.PlayerPresence.PlayerIsUnlocked)
+            {
+                gameManager.PlayerPresence.FreezePlayer(false, false);
+            }
+        }
 
-        // Cursor balik ke mode main game
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
 
-    // Dipanggil dari tombol "Continue"
     public void OnContinueButtonClicked()
     {
         ResumeGame();
     }
 
-    // Fungsi khusus untuk resume game dari home panel (bypass modal)
     public void ResumeFromHome()
     {
         if (isExitModalActive)
@@ -120,7 +141,6 @@ public class PauseManager : MonoBehaviour
         ResumeGame();
     }
 
-    // Fungsi untuk menampilkan exit modal
     public void ShowExitModal()
     {
         if (exitModal != null)
@@ -130,7 +150,6 @@ public class PauseManager : MonoBehaviour
         }
     }
 
-    // Fungsi untuk menutup exit modal
     public void CloseExitModal()
     {
         if (exitModal != null)
@@ -140,13 +159,10 @@ public class PauseManager : MonoBehaviour
         }
     }
 
-    // Fungsi untuk keluar dari game (dipanggil dari tombol Yes di exit modal)
     public void OnExitConfirmed()
     {
-        // Untuk di Unity Editor
         #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
-        // Untuk build
         #else
             Application.Quit();
         #endif

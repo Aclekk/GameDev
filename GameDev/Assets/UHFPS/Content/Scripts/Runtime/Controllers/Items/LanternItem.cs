@@ -1,6 +1,8 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UHFPS.Tools;
+using UHFPS.Input;
 using Newtonsoft.Json.Linq;
 
 namespace UHFPS.Runtime
@@ -54,6 +56,10 @@ namespace UHFPS.Runtime
         public SoundClip LanternHide;
         public SoundClip LanternReload;
 
+        [Header("Toggle Settings")]
+        public SoundClip toggleOnSound;
+        public SoundClip toggleOffSound;
+
         private AudioSource audioSource;
         private CanvasGroup lanternPanel;
         private CanvasGroup lanternFlame;
@@ -73,6 +79,7 @@ namespace UHFPS.Runtime
 
         private bool isEquipped;
         private bool isBusy;
+        private bool isLanternOn = true;
 
         public override string Name => "Lantern";
 
@@ -138,14 +145,29 @@ namespace UHFPS.Runtime
             if (!updateHandle)
                 return;
 
+            if (isEquipped && !isBusy && InputManager.ReadButtonOnce(this, Controls.FLASHLIGHT))
+            {
+                ToggleLantern();
+            }
+
             float flicker = Mathf.PerlinNoise(Time.time * FlameFlickerSpeed, 0);
             flameIntensity = Mathf.Lerp(FlameFlickerLimits.RealMin, FlameFlickerLimits.RealMax, flicker) * FlameLightIntensity;
 
-            if (isEquipped && !isBusy && !InfiniteFuel)
+            if (isEquipped && !isBusy && !InfiniteFuel && isLanternOn)
             {
-                // lantern fuel
                 currentFuel = currentFuel > 0 ? currentFuel -= Time.deltaTime : 0;
                 UpdateFuel();
+            }
+
+            if (!isLanternOn)
+            {
+                targetFlame = 0f;
+            }
+
+            if (lanternFuel <= 0f)
+            {
+                isLanternOn = false;
+                targetFlame = 0f;
             }
 
             float fuelFlameIntensity = flameIntensity * lanternFuel;
@@ -164,6 +186,37 @@ namespace UHFPS.Runtime
                 float flameAlpha = Mathf.Lerp(1, 0, 1 - mappedT);
                 LanternFlame.material.SetFloat("_Fade", flameAlpha);
             }
+        }
+
+        private void ToggleLantern()
+        {
+            if (lanternFuel <= 0f)
+            {
+                Debug.LogWarning("[LanternItem] Cannot toggle - fuel is empty!");
+                return;
+            }
+
+            isLanternOn = !isLanternOn;
+            
+            Debug.Log($"[LanternItem] Lantern toggled {(isLanternOn ? "ON" : "OFF")} (Fuel: {lanternFuel * 100f:F0}%)");
+
+            if (isLanternOn)
+            {
+                targetFlame = 1f;
+                if (toggleOnSound != null)
+                    audioSource.PlayOneShotSoundClip(toggleOnSound);
+            }
+            else
+            {
+                targetFlame = 0f;
+                if (toggleOffSound != null)
+                    audioSource.PlayOneShotSoundClip(toggleOffSound);
+            }
+        }
+
+        public bool IsLit()
+        {
+            return isLanternOn && isEquipped && lanternFuel > 0f && LanternLight != null && LanternLight.enabled;
         }
 
         public override void OnItemCombine(InventoryItem combineItem)
@@ -202,6 +255,7 @@ namespace UHFPS.Runtime
             audioSource.PlayOneShotSoundClip(LanternDraw);
 
             flameLerp = 0f;
+            isLanternOn = true;
             targetFlame = 1f;
             updateHandle = true;
             isEquipped = false;
@@ -271,13 +325,15 @@ namespace UHFPS.Runtime
         {
             return new StorableCollection()
             {
-                { "currentFuel", currentFuel }
+                { "currentFuel", currentFuel },
+                { "isLanternOn", isLanternOn }
             };
         }
 
         public override void OnCustomLoad(JToken data)
         {
-            currentFuel = FuelPercentage.From(FuelLife);
+            currentFuel = (float)data["currentFuel"];
+            isLanternOn = data["isLanternOn"] != null ? (bool)data["isLanternOn"] : true;
             UpdateFuel();
         }
     }

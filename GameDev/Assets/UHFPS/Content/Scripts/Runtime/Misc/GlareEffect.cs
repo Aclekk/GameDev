@@ -38,11 +38,34 @@ namespace UHFPS.Runtime
         private Transform mainCamera;
         private MeshRenderer meshRenderer;
         private float rotateAngle = 0.0f;
+        private string actualColorParam;
 
         private void Awake()
         {
             mainCamera = PlayerPresenceManager.Instance.PlayerCamera.transform;
             meshRenderer = GetComponent<MeshRenderer>();
+            
+            if (meshRenderer != null && meshRenderer.material != null)
+            {
+                Material mat = meshRenderer.material;
+                if (mat.HasProperty(ColorParam))
+                {
+                    actualColorParam = ColorParam;
+                }
+                else if (mat.HasProperty("_Color"))
+                {
+                    actualColorParam = "_Color";
+                }
+                else if (mat.HasProperty("_BaseColor"))
+                {
+                    actualColorParam = "_BaseColor";
+                }
+                else
+                {
+                    Debug.LogWarning($"[GlareEffect] Material '{mat.name}' with Shader '{mat.shader.name}' doesn't have color property '{ColorParam}', '_Color', or '_BaseColor'. Glare effect may not work correctly.");
+                    actualColorParam = ColorParam;
+                }
+            }
         }
 
         private void Update()
@@ -102,9 +125,12 @@ namespace UHFPS.Runtime
 
         private void SetColorAlpha(float alpha)
         {
-            Color color = meshRenderer.material.GetColor(ColorParam);
+            if (meshRenderer == null || meshRenderer.material == null || string.IsNullOrEmpty(actualColorParam))
+                return;
+                
+            Color color = meshRenderer.material.GetColor(actualColorParam);
             color.a = alpha;
-            meshRenderer.material.SetColor(ColorParam, color);
+            meshRenderer.material.SetColor(actualColorParam, color);
         }
 
         public void SetGlareVisibility(bool state)

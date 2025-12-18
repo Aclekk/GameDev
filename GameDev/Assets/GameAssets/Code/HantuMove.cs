@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UHFPS.Runtime;
 
 public class HantuMove : MonoBehaviour
 {
@@ -10,7 +11,7 @@ public class HantuMove : MonoBehaviour
     public Animator animator;                 // bool "isCrawl", trigger "Disappear", "Appear"
     public AudioSource audioSource;
     public AudioClip crawlClip;
-    public LanternController lanternController;
+    public LanternItem lanternItem;
 
     [Header("NavMesh")]
     public NavMeshAgent navMeshAgent;
@@ -116,8 +117,8 @@ public class HantuMove : MonoBehaviour
             audioSource.volume = 0f;
         }
 
-        if (lanternController == null)
-            lanternController = FindObjectOfType<LanternController>();
+        if (lanternItem == null)
+            lanternItem = FindObjectOfType<LanternItem>();
 
         _jumpscare = GetComponent<HantuJumpscare>();
         _ghostColliders = GetComponentsInChildren<Collider>(true);
@@ -548,18 +549,21 @@ public class HantuMove : MonoBehaviour
     // --- DETECTION SYSTEM ---
     public bool IsInLanternRadius()
     {
-        if (lanternController == null || !lanternController.IsLit) return false;
+        if (lanternItem == null || !lanternItem.IsLit()) return false;
 
-        Vector3 origin = (lanternController.lanternLight != null)
-            ? lanternController.lanternLight.transform.position
-            : (player != null ? player.position : transform.position);
+        Vector3 origin = player != null ? player.position : transform.position;
+        
+        if (lanternItem.LanternLight != null)
+        {
+            origin = lanternItem.LanternLight.transform.position;
+        }
 
         float effectiveRadius = maxDetectionRadius;
 
-        if (useDynamicDetection && lanternController != null)
+        if (useDynamicDetection && lanternItem != null)
         {
-            float oilPercent = Mathf.Clamp01(lanternController.currentOil / lanternController.maxOil);
-            float radiusCurve = Mathf.Pow(oilPercent, 0.5f);
+            float fuelPercent = lanternItem.lanternFuel;
+            float radiusCurve = Mathf.Pow(fuelPercent, 0.5f);
             effectiveRadius = Mathf.Lerp(minDetectionRadius, maxDetectionRadius, radiusCurve);
         }
 
@@ -574,12 +578,12 @@ public class HantuMove : MonoBehaviour
     
     public float GetCurrentDetectionRadius()
     {
-        if (lanternController == null || !lanternController.IsLit) return 0f;
+        if (lanternItem == null || !lanternItem.IsLit()) return 0f;
 
-        if (useDynamicDetection && lanternController != null)
+        if (useDynamicDetection && lanternItem != null)
         {
-            float oilPercent = Mathf.Clamp01(lanternController.currentOil / lanternController.maxOil);
-            float radiusCurve = Mathf.Pow(oilPercent, 0.5f);
+            float fuelPercent = lanternItem.lanternFuel;
+            float radiusCurve = Mathf.Pow(fuelPercent, 0.5f);
             return Mathf.Lerp(minDetectionRadius, maxDetectionRadius, radiusCurve);
         }
 

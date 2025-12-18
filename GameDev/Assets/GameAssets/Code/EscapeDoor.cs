@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using TMPro;
+using UHFPS.Runtime;
 
 public class EscapeDoor : MonoBehaviour
 {
@@ -24,7 +25,8 @@ public class EscapeDoor : MonoBehaviour
     [Header("Teleport Points")]
     public Transform insidePoint;       
     public Transform outsideCheckPoint; 
-    public float checkDistance = 5f;    
+    public float checkDistance = 5f;
+    public bool flipInsideRotation180 = false;    
 
     [Header("Teleport Settings")]
     public float fadeInDuration = 0.3f; 
@@ -133,27 +135,46 @@ public class EscapeDoor : MonoBehaviour
 
         if (insidePoint)
         {
-            CharacterController cc = player.GetComponent<CharacterController>();
-            if (cc)
-            {
-                cc.enabled = false;
-                player.position = insidePoint.position;
-                player.rotation = insidePoint.rotation;
-                yield return null;
-                cc.enabled = true;
-            }
-            else
-            {
-                player.position = insidePoint.position;
-                player.rotation = insidePoint.rotation;
-            }
-
+            TeleportPlayer(insidePoint, flipInsideRotation180);
             Debug.Log("[EscapeDoor] Player teleported inside the house.");
         }
 
         yield return new WaitForSeconds(fadeInDuration);
 
         if (playerControllerToDisable) playerControllerToDisable.enabled = true;
+    }
+
+    void TeleportPlayer(Transform target, bool flip180 = false)
+    {
+        if (!target) return;
+
+        LookController lookController = player.GetComponentInChildren<LookController>();
+        CharacterController cc = player.GetComponent<CharacterController>();
+
+        if (cc)
+        {
+            cc.enabled = false;
+        }
+
+        player.position = target.position;
+        player.rotation = Quaternion.identity;
+
+        if (cc)
+        {
+            cc.enabled = true;
+        }
+
+        if (lookController != null)
+        {
+            float targetRotation = target.eulerAngles.y;
+            if (flip180)
+            {
+                targetRotation += 180f;
+                if (targetRotation >= 360f) targetRotation -= 360f;
+            }
+            
+            lookController.LookRotation = new Vector2(targetRotation, 0f);
+        }
     }
 
     IEnumerator ShowNeedKey()

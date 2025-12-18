@@ -27,9 +27,6 @@ public class LanternController : MonoBehaviour
     public float maxRange = 8f;
     public float minRange = 2f;
 
-    [Header("Input")]
-    public KeyCode toggleKey = KeyCode.F;
-
     [Header("Events (Opsional untuk UI)")]
     public UnityEvent<float> OnOilPercentChanged;
     public UnityEvent<bool> OnLanternToggled;
@@ -64,14 +61,9 @@ public class LanternController : MonoBehaviour
 
     void Update()
     {
-        // Toggle lampu
-        if (Input.GetKeyDown(toggleKey))
-            SetLantern(!IsOn);
-
         if (IsOn && currentOil <= 0f)
             SetLantern(false);
 
-        // Oil consumption
         if (IsOn && currentOil > 0f)
         {
             currentOil -= consumptionPerSecond * Time.deltaTime;
@@ -90,6 +82,11 @@ public class LanternController : MonoBehaviour
         currentOil = Mathf.Clamp(currentOil + amount, 0f, maxOil);
         ApplyLightByOil();
         OnOilPercentChanged?.Invoke(currentOil / maxOil);
+    }
+
+    public void ToggleLantern()
+    {
+        SetLantern(!IsOn);
     }
 
     void SetLantern(bool on, bool instant = false)

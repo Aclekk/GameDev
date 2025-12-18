@@ -21,15 +21,16 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Candle Flame YBillboard
-  m_Shader: {fileID: -6465566751694194690, guid: bb8cc0e1102b6c7488cad64ea62bdf64, type: 3}
+  m_Shader: {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - _GLOSSYREFLECTIONS_OFF
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
+  m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
@@ -130,7 +131,7 @@ Material:
     - _Fire_Size_Multiplier: 2.5
     - _Fire_UV_Clamp: 0.775
     - _GlossMapScale: 0
-    - _Glossiness: 0
+    - _Glossiness: 0.5
     - _GlossyReflections: 0
     - _Glow_Brightness: 2
     - _Glow_Offset: -0.02
@@ -138,6 +139,7 @@ Material:
     - _Mask_Hardness: 0.6
     - _Mask_Radius: 0
     - _Metallic: 0
+    - _Mode: 0
     - _Noise_Factor: 0.1
     - _Noise_Intensity: 0.1
     - _Noise_Size: 0.3
@@ -154,6 +156,7 @@ Material:
     - _SrcBlend: 1
     - _Surface: 0
     - _Time_Scale: 1
+    - _UVSec: 0
     - _UV_Clamp: 1
     - _WorkflowMode: 1
     - _ZTest: 4

@@ -169,8 +169,8 @@ namespace UHFPS.Runtime
         private void Awake()
         {
             Disposables = new CompositeDisposable();
-            InputManager.Performed(Controls.PAUSE, OnPause);
-            InputManager.Performed(Controls.INVENTORY, OnInventory);
+            // InputManager.Performed(Controls.PAUSE, OnPause);
+            // InputManager.Performed(Controls.INVENTORY, OnInventory);
 
             // update stamina slider value
             if (PlayerPresence.StateMachine.PlayerFeatures.EnableStamina)
