@@ -10,6 +10,9 @@ public class SyncButtonTexts : MonoBehaviour
     
     [Tooltip("Highlighted state text")]
     public TextMeshProUGUI highlightedText;
+    
+    [Tooltip("Pressed state text")]
+    public TextMeshProUGUI pressedText;
 
     [Header("Settings")]
     [Tooltip("Translation key for this button")]
@@ -84,6 +87,12 @@ public class SyncButtonTexts : MonoBehaviour
             Debug.Log($"[SyncButtonTexts] Updated Highlighted text to: {translatedText}");
         }
         
+        if (pressedText != null)
+        {
+            pressedText.text = translatedText;
+            Debug.Log($"[SyncButtonTexts] Updated Pressed text to: {translatedText}");
+        }
+        
         if (rebuildLayout)
         {
             ForceRebuildLayout();
@@ -106,6 +115,15 @@ public class SyncButtonTexts : MonoBehaviour
         if (highlightedText != null)
         {
             ContentSizeFitter fitter = highlightedText.GetComponent<ContentSizeFitter>();
+            if (fitter != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(fitter.GetComponent<RectTransform>());
+            }
+        }
+        
+        if (pressedText != null)
+        {
+            ContentSizeFitter fitter = pressedText.GetComponent<ContentSizeFitter>();
             if (fitter != null)
             {
                 LayoutRebuilder.ForceRebuildLayoutImmediate(fitter.GetComponent<RectTransform>());

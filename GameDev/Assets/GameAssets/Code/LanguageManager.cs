@@ -43,25 +43,34 @@ public class LanguageManager : MonoBehaviour
         AddTranslation("settings", "SETTINGS", "PENGATURAN");
         AddTranslation("exit_game", "EXIT", "KELUAR");
         AddTranslation("back", "BACK", "KEMBALI");
-        
+        AddTranslation("no", "NO", "TIDAK");
+        AddTranslation("yes", "YES", "YA");
+
         AddTranslation("title_help", "HOW TO PLAY", "CARA BERMAIN");
         AddTranslation("title_settings", "SETTINGS", "PENGATURAN");
         
         AddTranslation("tab_video", "VIDEO", "VIDEO");
         AddTranslation("tab_audio", "AUDIO", "AUDIO");
         AddTranslation("tab_gameplay", "GAMEPLAY", "GAMEPLAY");
+        AddTranslation("general", "GENERAL", "UMUM");
+        AddTranslation("ui", "UI SCALE: ", "SKALA UI: ");
         
         AddTranslation("resolution", "RESOLUTION", "RESOLUSI");
         AddTranslation("quality", "QUALITY", "KUALITAS");
         AddTranslation("fullscreen", "FULLSCREEN", "LAYAR PENUH");
         AddTranslation("vsync", "VSYNC", "VSYNC");
         AddTranslation("language", "LANGUAGE:", "BAHASA:  ");
+        AddTranslation("usedkey", "USED KEYS", "TOMBOL PINTAS");
+        AddTranslation("previous", "PREVIOUS", "SEBELUMNYA");
+        AddTranslation("next", "NEXT", "BERIKUTNYA");
         
-        AddTranslation("master_volume", "MASTER VOLUME", "VOLUME UTAMA");
-        AddTranslation("music_volume", "MUSIC VOLUME", "VOLUME MUSIK");
-        AddTranslation("sfx_volume", "SFX VOLUME", "VOLUME EFEK");
+        AddTranslation("master_volume", "MASTER VOLUME:", "VOLUME UTAMA:");
+        AddTranslation("asset", "ASSET WE USE:", "ASSET YANG KAMI GUNAKAN:");
+        AddTranslation("music_volume", "MUSIC VOLUME:", "VOLUME MUSIK:");
+        AddTranslation("sfx_volume", "SFX VOLUME: ", "VOLUME EFEK: ");
+        AddTranslation("yakin?", "ARE YOU SURE YOU WANT TO EXIT?", "APAKAH ANDA YAKIN INGIN KELUAR?");
         
-        AddTranslation("sensitivity", "SENSITIVITY", "SENSITIVITAS");
+        AddTranslation("sensitivity", "SENSITIVITY: ", "SENSITIVITAS: ");
         AddTranslation("invert_y", "INVERT Y AXIS", "BALIK SUMBU Y");
         AddTranslation("fov", "FIELD OF VIEW", "BIDANG PANDANG");
         
