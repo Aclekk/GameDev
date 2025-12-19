@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Cinemachine;
 
 public class HantuJumpscare : MonoBehaviour
 {
@@ -11,6 +12,7 @@ public class HantuJumpscare : MonoBehaviour
     public MonoBehaviour enemyMovementToDisable;    // mis. HantuMove
     public MonoBehaviour playerControllerToDisable; // mis. FirstPersonController/HeroController
     public MonoBehaviour[] extraPlayerScriptsToDisable; // opsional: sway/headbob dll.
+    public CinemachineVirtualCamera playerVirtualCamera; // Virtual Camera untuk disable saat jumpscare
 
     [Header("Trigger & Kamera")]
     public float triggerRadius = 2.2f;    // jarak memicu jumpscare
@@ -45,6 +47,7 @@ public class HantuJumpscare : MonoBehaviour
     CharacterController playerCc;
     Transform camOriginalParent;
     private HantuMove hantuMove;
+    private UnityEngine.AI.NavMeshAgent hantuNavAgent;
     private AudioSource[] allSceneAudioSources;
     private float[] originalVolumes;
 
@@ -52,11 +55,14 @@ public class HantuJumpscare : MonoBehaviour
 
     void Awake()
     {
-        if (player == null) { var p = GameObject.Find("Player"); if (p) player = p.transform; }
+        if (player == null) { var p = GameObject.FindGameObjectWithTag("Player"); if (p) player = p.transform; }
         if (playerCamera == null)
         {
-            var pc = player ? player.GetComponentInChildren<Camera>(true) : Camera.main;
-            if (pc) playerCamera = pc;
+            playerCamera = Camera.main;
+        }
+        if (playerVirtualCamera == null && player != null)
+        {
+            playerVirtualCamera = player.GetComponentInChildren<CinemachineVirtualCamera>(true);
         }
         if (enemyAnimator == null) enemyAnimator = GetComponentInChildren<Animator>();
         if (audioSource == null)   audioSource   = GetComponent<AudioSource>();
@@ -80,6 +86,7 @@ public class HantuJumpscare : MonoBehaviour
         }
 
         hantuMove = GetComponent<HantuMove>();
+        hantuNavAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
 
         if (loseCanvas && loseCanvas.activeSelf) loseCanvas.SetActive(false);
     }
@@ -105,6 +112,18 @@ public class HantuJumpscare : MonoBehaviour
         if (muteAllSceneAudioOnJumpscare)
         {
             MuteAllSceneAudio();
+        }
+
+        if (playerVirtualCamera != null)
+        {
+            playerVirtualCamera.enabled = false;
+        }
+
+        if (hantuNavAgent != null && hantuNavAgent.isOnNavMesh)
+        {
+            hantuNavAgent.isStopped = true;
+            hantuNavAgent.ResetPath();
+            hantuNavAgent.velocity = Vector3.zero;
         }
 
         if (enemyMovementToDisable) enemyMovementToDisable.enabled = false;
@@ -136,17 +155,20 @@ public class HantuJumpscare : MonoBehaviour
 
         var camT = playerCamera.transform;
         camOriginalParent = camT.parent;
+        
         Vector3 head = transform.position + Vector3.up * camHeight;
         Vector3 targetPos = transform.position + transform.forward * camApproach + Vector3.up * camHeight;
         Quaternion targetRot = Quaternion.LookRotation((head - targetPos).normalized, Vector3.up);
 
         if (instantSnap || camLerpTime <= 0.01f)
         {
-            camT.position = targetPos; camT.rotation = targetRot;
+            camT.position = targetPos; 
+            camT.rotation = targetRot;
         }
         else
         {
-            Vector3 startPos = camT.position; Quaternion startRot = camT.rotation;
+            Vector3 startPos = camT.position; 
+            Quaternion startRot = camT.rotation;
             float t = 0f;
             while (t < camLerpTime)
             {
@@ -156,9 +178,9 @@ public class HantuJumpscare : MonoBehaviour
                 camT.rotation = Quaternion.Slerp(startRot, targetRot, k);
                 yield return null;
             }
-            camT.position = targetPos; camT.rotation = targetRot;
+            camT.position = targetPos; 
+            camT.rotation = targetRot;
         }
-        camT.SetParent(transform, true);
 
         yield return new WaitForSeconds(jumpscareDuration);
 

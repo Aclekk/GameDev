@@ -1,6 +1,7 @@
 using UnityEngine;
 using Michsky.UI.Dark;
 using UHFPS.Runtime;
+using UnityEngine.AI;
 
 public class PauseManager : MonoBehaviour
 {
@@ -11,6 +12,12 @@ public class PauseManager : MonoBehaviour
 
     private bool isPaused = false;
     private bool isExitModalActive = false;
+    private AudioSource[] allAudioSources;
+    private bool[] audioSourceStates;
+    private HantuMove[] allHantuScripts;
+    private NavMeshAgent[] allNavMeshAgents;
+    private bool[] hantuScriptsStates;
+    private bool[] navMeshAgentsStates;
 
     void Start()
     {
@@ -103,6 +110,9 @@ public class PauseManager : MonoBehaviour
             }
         }
 
+        FreezeAllGhosts();
+        MuteAllAudio();
+
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
@@ -122,6 +132,9 @@ public class PauseManager : MonoBehaviour
                 gameManager.PlayerPresence.FreezePlayer(false, false);
             }
         }
+
+        UnfreezeAllGhosts();
+        UnmuteAllAudio();
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -166,5 +179,105 @@ public class PauseManager : MonoBehaviour
         #else
             Application.Quit();
         #endif
+    }
+
+    private void MuteAllAudio()
+    {
+        allAudioSources = FindObjectsOfType<AudioSource>();
+        audioSourceStates = new bool[allAudioSources.Length];
+
+        for (int i = 0; i < allAudioSources.Length; i++)
+        {
+            if (IsAudioSourceInPausedCanvas(allAudioSources[i]))
+            {
+                audioSourceStates[i] = false;
+                continue;
+            }
+
+            audioSourceStates[i] = allAudioSources[i].isPlaying;
+            if (allAudioSources[i].isPlaying)
+            {
+                allAudioSources[i].Pause();
+            }
+        }
+    }
+
+    private void UnmuteAllAudio()
+    {
+        if (allAudioSources != null && audioSourceStates != null)
+        {
+            for (int i = 0; i < allAudioSources.Length; i++)
+            {
+                if (allAudioSources[i] != null && audioSourceStates[i])
+                {
+                    allAudioSources[i].UnPause();
+                }
+            }
+        }
+    }
+
+    private bool IsAudioSourceInPausedCanvas(AudioSource audioSource)
+    {
+        if (pausedCanvas == null || audioSource == null)
+            return false;
+
+        Transform current = audioSource.transform;
+        while (current != null)
+        {
+            if (current.gameObject == pausedCanvas)
+                return true;
+            current = current.parent;
+        }
+        return false;
+    }
+
+    private void FreezeAllGhosts()
+    {
+        allHantuScripts = FindObjectsOfType<HantuMove>();
+        hantuScriptsStates = new bool[allHantuScripts.Length];
+
+        for (int i = 0; i < allHantuScripts.Length; i++)
+        {
+            hantuScriptsStates[i] = allHantuScripts[i].enabled;
+            allHantuScripts[i].enabled = false;
+        }
+
+        allNavMeshAgents = FindObjectsOfType<NavMeshAgent>();
+        navMeshAgentsStates = new bool[allNavMeshAgents.Length];
+
+        for (int i = 0; i < allNavMeshAgents.Length; i++)
+        {
+            navMeshAgentsStates[i] = allNavMeshAgents[i].enabled;
+            if (allNavMeshAgents[i].enabled)
+            {
+                allNavMeshAgents[i].isStopped = true;
+                allNavMeshAgents[i].velocity = Vector3.zero;
+            }
+        }
+    }
+
+    private void UnfreezeAllGhosts()
+    {
+        if (allHantuScripts != null && hantuScriptsStates != null)
+        {
+            for (int i = 0; i < allHantuScripts.Length; i++)
+            {
+                if (allHantuScripts[i] != null)
+                {
+                    allHantuScripts[i].enabled = hantuScriptsStates[i];
+                }
+            }
+        }
+
+        if (allNavMeshAgents != null && navMeshAgentsStates != null)
+        {
+            for (int i = 0; i < allNavMeshAgents.Length; i++)
+            {
+                if (allNavMeshAgents[i] != null && navMeshAgentsStates[i])
+                {
+                    allNavMeshAgents[i].isStopped = false;
+                }
+            }
+        }
     }
 }

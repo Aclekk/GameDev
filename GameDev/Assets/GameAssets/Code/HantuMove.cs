@@ -8,6 +8,7 @@ public class HantuMove : MonoBehaviour
 {
     [Header("Referensi")]
     public Transform player;
+    public Transform playerBody;
     public Animator animator;                 // bool "isCrawl", trigger "Disappear", "Appear"
     public AudioSource audioSource;
     public AudioClip crawlClip;
@@ -21,12 +22,22 @@ public class HantuMove : MonoBehaviour
     public float idleChance = 0.3f;
     public float idleDuration = 2f;
 
+    [Header("Chase System")]
+    public float chaseDetectionRadius = 10f;
+    public float chaseStopRadius = 15f;
+    public float chaseUpdateInterval = 0.2f;
+
     [Header("Spawn System")]
     public Transform[] spawnPoints;
-    public float minSpawnTime = 30f;
-    public float maxSpawnTime = 70f;
+    public float minSpawnTime = 20f;
+    public float maxSpawnTime = 40f;
     public bool startHidden = true;
     public bool debugImmediateSpawn = false;
+    
+    [Header("Auto Despawn System")]
+    public bool enableAutoDespawn = true;
+    public float minActiveDuration = 20f;
+    public float maxActiveDuration = 40f;
 
     [Header("Stuck Detection")]
     public float stuckCheckInterval = 2f;
@@ -51,7 +62,7 @@ public class HantuMove : MonoBehaviour
     public AudioClip hitByLanternClip;
     [Range(0f, 1f)] public float hitByLanternVolume = 1f;
 
-    private enum GhostState { Hidden, Spawning, Idle, Wandering, Disappearing }
+    private enum GhostState { Hidden, Spawning, Idle, Wandering, Chasing, Disappearing }
     private GhostState _currentState = GhostState.Hidden;
     private Vector3 _wanderTarget;
     private float _spawnTimer;
@@ -63,11 +74,16 @@ public class HantuMove : MonoBehaviour
     private float _stuckCheckTimer;
     private Vector3 _lastPosition;
     private int _pathRetryCount;
+    private float _activeTimer;
+    private float _nextDespawnTime;
+    private float _chaseUpdateTimer;
     
     [Header("Debug Info")]
     [SerializeField] private string debugState;
     [SerializeField] private float debugSpawnTimer;
     [SerializeField] private float debugNextSpawnTime;
+    [SerializeField] private float debugActiveTimer;
+    [SerializeField] private float debugNextDespawnTime;
 
     void Awake()
     {
@@ -271,14 +287,17 @@ public class HantuMove : MonoBehaviour
     {
         _currentState = GhostState.Spawning;
         
-        // Play appear animation
         if (animator)
             animator.SetTrigger("Appear");
         
-        // Wait for animation to finish
         yield return new WaitForSeconds(1f);
         
         if (navMeshAgent) navMeshAgent.isStopped = false;
+        
+        _activeTimer = 0f;
+        _nextDespawnTime = Random.Range(minActiveDuration, maxActiveDuration);
+        Debug.Log($"Ghost akan auto-despawn dalam {_nextDespawnTime:F1} detik");
+        
         StartWandering();
     }
 
@@ -322,12 +341,12 @@ public class HantuMove : MonoBehaviour
 
     void Update()
     {
-        // Update debug info
         debugState = _currentState.ToString();
         debugSpawnTimer = _spawnTimer;
         debugNextSpawnTime = _nextSpawnTime;
+        debugActiveTimer = _activeTimer;
+        debugNextDespawnTime = _nextDespawnTime;
         
-        // Handle spawn timer when hidden
         if (_currentState == GhostState.Hidden)
         {
             _spawnTimer += Time.deltaTime;
@@ -340,28 +359,36 @@ public class HantuMove : MonoBehaviour
 
         bool jumpscareActive = (_jumpscare != null && _jumpscare.IsInProgress);
 
-        // saat jumpscare: jangan boleh despawn gara2 "kamera auto natap"
         if (!jumpscareActive && _currentState != GhostState.Hidden && _currentState != GhostState.Disappearing)
         {
             if (IsInLanternRadius())
             {
-                // stop crawl loop biar ga tabrakan sama sfx cahaya
                 ForceStopFootstepAudio();
 
-                // bunyi kena cahaya (pakai PlayClipAtPoint biar ga ikut ke-stop)
                 if (hitByLanternClip != null)
                     AudioSource.PlayClipAtPoint(hitByLanternClip, transform.position, hitByLanternVolume);
 
                 StartCoroutine(DisappearSequence());
                 return;
             }
+            
+            if (enableAutoDespawn)
+            {
+                _activeTimer += Time.deltaTime;
+                if (_activeTimer >= _nextDespawnTime)
+                {
+                    Debug.Log("Auto-despawn timer reached! Ghost moving to new location...");
+                    StartCoroutine(DisappearSequence());
+                    return;
+                }
+            }
+            
+            CheckChaseCondition();
         }
 
-        // Handle different states
         switch (_currentState)
         {
             case GhostState.Spawning:
-                // Spawning animation handled by coroutine
                 break;
 
             case GhostState.Idle:
@@ -375,6 +402,10 @@ public class HantuMove : MonoBehaviour
             case GhostState.Wandering:
                 HandleWandering();
                 break;
+
+            case GhostState.Chasing:
+                HandleChasing();
+                break;
         }
 
         UpdateAnimator();
@@ -385,6 +416,10 @@ public class HantuMove : MonoBehaviour
     void StartWandering()
     {
         _currentState = GhostState.Wandering;
+        
+        if (navMeshAgent)
+            navMeshAgent.speed = wanderSpeed;
+            
         SetNewWanderTarget();
     }
 
@@ -546,6 +581,110 @@ public class HantuMove : MonoBehaviour
             navMeshAgent.isStopped = true;
     }
 
+    void CheckChaseCondition()
+    {
+        if (player == null) return;
+
+        Transform targetTransform = playerBody != null ? playerBody : player;
+        
+        Vector3 flatGhostPos = new Vector3(transform.position.x, 0f, transform.position.z);
+        Vector3 flatPlayerPos = new Vector3(targetTransform.position.x, 0f, targetTransform.position.z);
+        float horizontalDist = Vector3.Distance(flatGhostPos, flatPlayerPos);
+
+        if (_currentState == GhostState.Chasing)
+        {
+            if (horizontalDist > chaseStopRadius)
+            {
+                Debug.Log("Player too far, stopping chase and returning to NavMesh");
+                ReturnToNavMesh();
+            }
+        }
+        else if (_currentState == GhostState.Wandering || _currentState == GhostState.Idle)
+        {
+            if (horizontalDist <= chaseDetectionRadius)
+            {
+                Debug.Log("Player detected! Starting chase");
+                StartChasing();
+            }
+        }
+    }
+    
+    void ReturnToNavMesh()
+    {
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(transform.position, out hit, 20f, NavMesh.AllAreas))
+        {
+            transform.position = hit.position;
+            
+            if (navMeshAgent)
+            {
+                navMeshAgent.enabled = true;
+                navMeshAgent.isStopped = false;
+            }
+            
+            Debug.Log("Returned to NavMesh at " + hit.position);
+            StartWandering();
+        }
+        else
+        {
+            Debug.LogWarning("Could not find nearby NavMesh! Searching wider...");
+            if (NavMesh.SamplePosition(transform.position, out hit, 50f, NavMesh.AllAreas))
+            {
+                transform.position = hit.position;
+                
+                if (navMeshAgent)
+                {
+                    navMeshAgent.enabled = true;
+                    navMeshAgent.isStopped = false;
+                }
+                
+                Debug.Log("Returned to NavMesh at wider radius: " + hit.position);
+                StartWandering();
+            }
+            else
+            {
+                Debug.LogError("Failed to find NavMesh! Forcing despawn...");
+                StartCoroutine(DisappearSequence());
+            }
+        }
+    }
+
+    void StartChasing()
+    {
+        _currentState = GhostState.Chasing;
+        _chaseUpdateTimer = 0f;
+        
+        if (navMeshAgent)
+        {
+            navMeshAgent.isStopped = true;
+            navMeshAgent.enabled = false;
+        }
+        
+        Debug.Log("Chase started - NavMesh disabled, direct pursuit mode!");
+    }
+
+    void HandleChasing()
+    {
+        if (player == null) return;
+
+        Transform targetTransform = playerBody != null ? playerBody : player;
+        
+        Vector3 directionToPlayer = (targetTransform.position - transform.position);
+        directionToPlayer.y = 0f;
+        directionToPlayer.Normalize();
+        
+        Vector3 targetPosition = transform.position + directionToPlayer * chaseSpeed * Time.deltaTime;
+        transform.position = targetPosition;
+        
+        if (directionToPlayer != Vector3.zero)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(directionToPlayer);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 8f);
+        }
+
+        _isMoving = true;
+    }
+
     // --- DETECTION SYSTEM ---
     public bool IsInLanternRadius()
     {
@@ -596,7 +735,6 @@ public class HantuMove : MonoBehaviour
     {
         if (animator == null) return;
 
-        // Saat spawning / disappearing: paksa idle
         if (_currentState == GhostState.Spawning || _currentState == GhostState.Disappearing)
         {
             animator.SetBool("isCrawl", false);
@@ -678,16 +816,36 @@ public class HantuMove : MonoBehaviour
         
         Gizmos.color = Color.yellow;
         if (currentRadius > 0f)
-            Gizmos.DrawWireSphere(transform.position, currentRadius);
+            DrawHorizontalCircle(transform.position, currentRadius);
         else
-            Gizmos.DrawWireSphere(transform.position, maxDetectionRadius);
+            DrawHorizontalCircle(transform.position, maxDetectionRadius);
         
         Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(transform.position, wanderRadius);
+        DrawHorizontalCircle(transform.position, wanderRadius);
         
         Gizmos.color = new Color(0f, 1f, 0f, 0.6f);
-        Gizmos.DrawWireSphere(transform.position, audioTriggerRadius);
+        DrawHorizontalCircle(transform.position, audioTriggerRadius);
         Gizmos.color = new Color(0f, 1f, 0f, 0.25f);
-        Gizmos.DrawWireSphere(transform.position, audioMaxDistance);
+        DrawHorizontalCircle(transform.position, audioMaxDistance);
+        
+        Gizmos.color = Color.red;
+        DrawHorizontalCircle(transform.position, chaseDetectionRadius);
+        Gizmos.color = new Color(1f, 0.5f, 0f, 0.5f);
+        DrawHorizontalCircle(transform.position, chaseStopRadius);
+    }
+    
+    void DrawHorizontalCircle(Vector3 center, float radius)
+    {
+        int segments = 64;
+        float angleStep = 360f / segments;
+        Vector3 prevPoint = center + new Vector3(radius, 0f, 0f);
+        
+        for (int i = 1; i <= segments; i++)
+        {
+            float angle = angleStep * i * Mathf.Deg2Rad;
+            Vector3 newPoint = center + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
+            Gizmos.DrawLine(prevPoint, newPoint);
+            prevPoint = newPoint;
+        }
     }
 }
