@@ -303,7 +303,7 @@ public class HantuMove : MonoBehaviour
 
     IEnumerator DisappearSequence()
     {
-        _currentState = GhostState.Disappearing;
+        // State sudah di-set di Update() sebelum coroutine dipanggil
         
         // >>> PATCH: matiin jumpscare radius saat kena lantern / mau hilang
         if (_jumpscare) _jumpscare.enabled = false;     // stop HantuJumpscare.Update
@@ -317,8 +317,11 @@ public class HantuMove : MonoBehaviour
         }
         
         // Stop movement
-        if (navMeshAgent)
+        if (navMeshAgent && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+        {
             navMeshAgent.isStopped = true;
+            navMeshAgent.ResetPath();
+        }
         
         // Play idle animation first
         if (animator)
@@ -363,6 +366,7 @@ public class HantuMove : MonoBehaviour
         {
             if (IsInLanternRadius())
             {
+                _currentState = GhostState.Disappearing;
                 ForceStopFootstepAudio();
 
                 if (hitByLanternClip != null)

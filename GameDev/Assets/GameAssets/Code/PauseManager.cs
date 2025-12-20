@@ -18,6 +18,12 @@ public class PauseManager : MonoBehaviour
     private NavMeshAgent[] allNavMeshAgents;
     private bool[] hantuScriptsStates;
     private bool[] navMeshAgentsStates;
+    private UHFPS.Runtime.LanternItem lanternItem;
+    private Light lanternLight;
+    private Animator lanternAnimator;
+    private bool lanternItemWasEnabled;
+    private bool lanternLightWasEnabled;
+    private bool lanternAnimatorWasEnabled;
 
     void Start()
     {
@@ -27,6 +33,7 @@ public class PauseManager : MonoBehaviour
         }
 
         DisableUHFPSPauseAndInventory();
+        CacheLanternItem();
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -51,6 +58,24 @@ public class PauseManager : MonoBehaviour
             if (gameManager.TabPanel != null)
             {
                 gameManager.TabPanel.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    private void CacheLanternItem()
+    {
+        lanternItem = FindObjectOfType<UHFPS.Runtime.LanternItem>();
+        if (lanternItem != null)
+        {
+            if (lanternItem.LanternLight != null)
+            {
+                lanternLight = lanternItem.LanternLight;
+            }
+
+            Transform lanternAnims = lanternItem.transform.Find("LanternAnims");
+            if (lanternAnims != null)
+            {
+                lanternAnimator = lanternAnims.GetComponent<Animator>();
             }
         }
     }
@@ -112,6 +137,7 @@ public class PauseManager : MonoBehaviour
 
         FreezeAllGhosts();
         MuteAllAudio();
+        FreezeLantern();
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -135,6 +161,7 @@ public class PauseManager : MonoBehaviour
 
         UnfreezeAllGhosts();
         UnmuteAllAudio();
+        UnfreezeLantern();
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -278,6 +305,45 @@ public class PauseManager : MonoBehaviour
                     allNavMeshAgents[i].isStopped = false;
                 }
             }
+        }
+    }
+
+    private void FreezeLantern()
+    {
+        if (lanternItem != null)
+        {
+            lanternItemWasEnabled = lanternItem.enabled;
+            lanternItem.enabled = false;
+        }
+
+        if (lanternLight != null)
+        {
+            lanternLightWasEnabled = lanternLight.enabled;
+            lanternLight.enabled = false;
+        }
+
+        if (lanternAnimator != null)
+        {
+            lanternAnimatorWasEnabled = lanternAnimator.enabled;
+            lanternAnimator.enabled = false;
+        }
+    }
+
+    private void UnfreezeLantern()
+    {
+        if (lanternItem != null && lanternItemWasEnabled)
+        {
+            lanternItem.enabled = true;
+        }
+
+        if (lanternLight != null && lanternLightWasEnabled)
+        {
+            lanternLight.enabled = true;
+        }
+
+        if (lanternAnimator != null && lanternAnimatorWasEnabled)
+        {
+            lanternAnimator.enabled = true;
         }
     }
 }

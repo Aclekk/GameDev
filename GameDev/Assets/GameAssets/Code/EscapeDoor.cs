@@ -281,7 +281,7 @@ public class EscapeDoor : MonoBehaviour
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(transform.position, interactRadius);
+        DrawCircleGizmo(transform.position, interactRadius);
 
         if (insidePoint)
         {
@@ -293,13 +293,28 @@ public class EscapeDoor : MonoBehaviour
         if (outsideCheckPoint)
         {
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(outsideCheckPoint.position, checkDistance);
+            DrawCircleGizmo(outsideCheckPoint.position, checkDistance);
             Gizmos.DrawLine(transform.position, outsideCheckPoint.position);
         }
         else
         {
             Gizmos.color = Color.yellow;
             Gizmos.DrawRay(transform.position, transform.forward * 3f);
+        }
+    }
+
+    void DrawCircleGizmo(Vector3 center, float radius)
+    {
+        const int segments = 36;
+        float angleStep = 360f / segments;
+        Vector3 prevPoint = center + new Vector3(radius, 0f, 0f);
+
+        for (int i = 1; i <= segments; i++)
+        {
+            float angle = angleStep * i * Mathf.Deg2Rad;
+            Vector3 newPoint = center + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
+            Gizmos.DrawLine(prevPoint, newPoint);
+            prevPoint = newPoint;
         }
     }
 }

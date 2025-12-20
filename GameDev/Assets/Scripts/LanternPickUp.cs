@@ -1,17 +1,13 @@
 using UnityEngine;
 using UHFPS.Runtime;
+using UHFPS.Input;
 
-public class LanternPickUp : MonoBehaviour
+public class LanternPickUp : MonoBehaviour, IInteractStart
 {
     [Header("Pickup Settings")]
-    public float pickupRadius = 1.5f;
     public AudioClip pickupSound;
     [Range(0f, 1f)] public float pickupVolume = 0.8f;
 
-    [Header("Lantern Item Reference")]
-    public int lanternItemIndex = 0;
-
-    Transform playerBody;
     PlayerItemsManager itemsManager;
     bool hasBeenPickedUp = false;
 
@@ -28,24 +24,17 @@ public class LanternPickUp : MonoBehaviour
         itemsManager = playerObj.GetComponentInChildren<PlayerItemsManager>();
         if (!itemsManager)
         {
-            Debug.LogError($"[LanternPickUp] PlayerItemsManager tidak ditemukan di {playerObj.name} atau children-nya!");
+            Debug.LogError("[LanternPickUp] PlayerItemsManager tidak ditemukan!");
             enabled = false;
             return;
         }
-
-        playerBody = playerObj.transform;
     }
 
-    void Update()
+    public void InteractStart()
     {
-        if (!playerBody || !itemsManager || hasBeenPickedUp) return;
+        if (hasBeenPickedUp) return;
 
-        float distance = HorizontalDistance(playerBody.position, transform.position);
-
-        if (distance <= pickupRadius)
-        {
-            PickupLantern();
-        }
+        PickupLantern();
     }
 
     void PickupLantern()
@@ -57,38 +46,17 @@ public class LanternPickUp : MonoBehaviour
             AudioSource.PlayClipAtPoint(pickupSound, transform.position, pickupVolume);
         }
 
-        if (itemsManager.PlayerItems.Count > lanternItemIndex)
+        for (int i = 0; i < itemsManager.PlayerItems.Count; i++)
         {
-            PlayerItemBehaviour lanternItem = itemsManager.PlayerItems[lanternItemIndex];
-            
-            if (lanternItem != null)
+            if (itemsManager.PlayerItems[i] is LanternItem)
             {
-                itemsManager.SwitchPlayerItem(lanternItemIndex);
-                Debug.Log("[LanternPickUp] Lantern berhasil di-equip!");
-            }
-            else
-            {
-                Debug.LogWarning($"[LanternPickUp] Item di index {lanternItemIndex} adalah null!");
+                itemsManager.SwitchPlayerItem(i);
+                Debug.Log($"[LanternPickUp] Lantern berhasil di-equip di index {i}!");
+                Destroy(gameObject);
+                return;
             }
         }
-        else
-        {
-            Debug.LogWarning($"[LanternPickUp] Index {lanternItemIndex} melebihi jumlah PlayerItems ({itemsManager.PlayerItems.Count})!");
-        }
 
-        Destroy(gameObject);
-    }
-
-    static float HorizontalDistance(Vector3 a, Vector3 b)
-    {
-        a.y = 0f; 
-        b.y = 0f;
-        return Vector3.Distance(a, b);
-    }
-
-    void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(transform.position, pickupRadius);
+        Debug.LogWarning("[LanternPickUp] LanternItem tidak ditemukan di PlayerItems!");
     }
 }
