@@ -93,6 +93,7 @@ public class LanguageManager : MonoBehaviour
         
         AddTranslation("loading", "LOADING...", "MEMUAT...");
         AddTranslation("press_any_key", "PRESS ANY KEY TO CONTINUE", "TEKAN TOMBOL APAPUN UNTUK LANJUT");
+        AddTranslation("continue", "CONTINUE", "LANJUTKAN");
         
         AddTranslation("lang_english", "English", "English");
         AddTranslation("lang_indonesian", "Indonesian", "Bahasa Indonesia");
