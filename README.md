@@ -1,34 +1,36 @@
 <div align="center">
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=28&duration=3000&pause=1000&color=F5A623&center=true&vCenter=true&width=600&lines=Mansion+Horror+%E2%80%94+KEL+9;First-Person+Survival+Horror;Built+with+Unity+%26+URP;Explore.+Survive.+Escape." alt="Typing SVG" />
+<img src="https://readme-typing-svg.demolab.com?font=Creepster&size=28&duration=4000&pause=1200&color=8B0000&center=true&vCenter=true&width=650&lines=Echoes+of+The+Old+House;First-Person+Survival+Horror;Built+with+Unity+%26+URP;Some+doors+should+stay+closed..." alt="Typing SVG" />
 
 <br/>
 
-![Unity](https://img.shields.io/badge/Unity-2022.3.62f2-000000?style=for-the-badge&logo=unity&logoColor=white)
-![URP](https://img.shields.io/badge/Render%20Pipeline-URP-333333?style=for-the-badge&logo=unity&logoColor=white)
-![Platform](https://img.shields.io/badge/Platform-PC-informational?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-In%20Development-yellow?style=for-the-badge)
-![License](https://img.shields.io/badge/License-Educational-blue?style=for-the-badge)
+![Unity](https://img.shields.io/badge/Unity-2022.3.62f2-8B0000?style=for-the-badge&logo=unity&logoColor=white)
+![URP](https://img.shields.io/badge/Render%20Pipeline-URP-1a1a1a?style=for-the-badge&logo=unity&logoColor=white)
+![Platform](https://img.shields.io/badge/Platform-PC-2b0000?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-In%20Development-800000?style=for-the-badge)
+![License](https://img.shields.io/badge/License-Educational-1a1a1a?style=for-the-badge)
 
 </div>
 
 ---
 
-## 🏚️ Tentang Game
+## 🕯️ Tentang Game
 
-**Echoes of The Old House** adalah game horor **first-person survival** yang membawa pemain menjelajahi sebuah rumah tua (mansion) yang berhantu. Bersenjatakan hanya sebuah **lentera** sebagai sumber cahaya, pemain harus mengumpulkan item, memecahkan puzzle, dan menghindari kejaran hantu untuk menemukan jalan keluar.
+**Echoes of The Old House** adalah game horor **first-person survival** yang membawa pemain menjelajahi sebuah rumah tua yang berhantu. Bersenjatakan hanya sebuah **lentera** yang cahayanya bisa padam kapan saja, pemain harus mengumpulkan item, memecahkan puzzle, dan menghindari sesuatu yang terus mengintai dari kegelapan — sebelum rumah itu menelan mereka juga.
+
+> *"Setiap sudut menyimpan gema masa lalu. Jangan biarkan mereka menemukanmu."*
 
 <div align="center">
 
-### ✨ Fitur Utama
+### 🩸 Fitur Utama
 
 </div>
 
 | 🎯 Fitur | 📋 Deskripsi |
 |:---|:---|
-| 🔦 **Sistem Lentera** | Sumber cahaya utama dengan mekanik bahan bakar (oil) yang bisa habis |
+| 🔦 **Sistem Lentera** | Satu-satunya sumber cahaya — bahan bakarnya terbatas dan bisa habis |
 | 🎒 **Inventory System** | Kumpulkan kunci, minyak, dan item penting lainnya |
-| 👻 **AI Hantu** | Musuh yang mengejar pemain dan memicu jumpscare |
+| 👻 **AI Hantu** | Entitas yang memburu pemain dan memicu jumpscare saat tertangkap |
 | 🚪 **Puzzle & Interaksi Pintu** | Basement, escape door, dan interaksi objek dinamis |
 | 💾 **Save / Pause / Menu** | Sistem menu lengkap dengan main menu & pause manager |
 | 🌐 **Multi-Bahasa** | Dukungan penuh Bahasa Indonesia & English |
@@ -81,11 +83,11 @@ GameDev/
 
 <div align="center">
 
-![C#](https://img.shields.io/badge/C%23-239120?style=for-the-badge&logo=csharp&logoColor=white)
-![Unity](https://img.shields.io/badge/Unity-100000?style=for-the-badge&logo=unity&logoColor=white)
-![Cinemachine](https://img.shields.io/badge/Cinemachine-1E90FF?style=for-the-badge)
-![ProBuilder](https://img.shields.io/badge/ProBuilder-8A2BE2?style=for-the-badge)
-![TextMeshPro](https://img.shields.io/badge/TextMeshPro-FF6347?style=for-the-badge)
+![C#](https://img.shields.io/badge/C%23-1a1a1a?style=for-the-badge&logo=csharp&logoColor=8B0000)
+![Unity](https://img.shields.io/badge/Unity-000000?style=for-the-badge&logo=unity&logoColor=8B0000)
+![Cinemachine](https://img.shields.io/badge/Cinemachine-2b0000?style=for-the-badge)
+![ProBuilder](https://img.shields.io/badge/ProBuilder-1a1a1a?style=for-the-badge)
+![TextMeshPro](https://img.shields.io/badge/TextMeshPro-800000?style=for-the-badge)
 
 </div>
 
@@ -107,7 +109,7 @@ git clone https://github.com/Aclekk/GameDev.git
 # 3. Buka scene entry point
 Assets/Scenes/MainMenu.unity
 
-# 4. Tekan ▶️ Play di Unity Editor
+# 4. Tekan ▶️ Play — dan berdoa lampunya nggak mati duluan
 ```
 
 ---
@@ -122,6 +124,8 @@ Assets/Scenes/MainMenu.unity
 
 ---
 
-Made with 🖤 & jumpscares by **Kelompok 9**
+🕯️ *The house remembers everyone who enters.* 🕯️
+
+Made in the dark by **Kelompok 9**
 
 </div>
