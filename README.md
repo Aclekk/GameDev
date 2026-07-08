@@ -14,66 +14,66 @@
 
 ---
 
-## 🕯️ Tentang Game
+## 🕯️ About the Game
 
-**Echoes of The Old House** adalah game horor **first-person survival** yang membawa pemain menjelajahi sebuah rumah tua yang berhantu. Bersenjatakan hanya sebuah **lentera** yang cahayanya bisa padam kapan saja, pemain harus mengumpulkan item, memecahkan puzzle, dan menghindari sesuatu yang terus mengintai dari kegelapan — sebelum rumah itu menelan mereka juga.
+**Echoes of The Old House** is a **first-person survival horror** game that drops the player into a haunted old house. Armed with nothing but a **lantern** whose light can die out at any moment, the player must gather items, solve puzzles, and evade something that keeps watching from the dark — before the house swallows them too.
 
-> *"Setiap sudut menyimpan gema masa lalu. Jangan biarkan mereka menemukanmu."*
+> *"Every corner holds an echo of the past. Don't let them find you."*
 
 <div align="center">
 
-### 🩸 Fitur Utama
+### 🩸 Key Features
 
 </div>
 
-| 🎯 Fitur | 📋 Deskripsi |
+| 🎯 Feature | 📋 Description |
 |:---|:---|
-| 🔦 **Sistem Lentera** | Satu-satunya sumber cahaya — bahan bakarnya terbatas dan bisa habis |
-| 🎒 **Inventory System** | Kumpulkan kunci, minyak, dan item penting lainnya |
-| 👻 **AI Hantu** | Entitas yang memburu pemain dan memicu jumpscare saat tertangkap |
-| 🚪 **Puzzle & Interaksi Pintu** | Basement, escape door, dan interaksi objek dinamis |
-| 💾 **Save / Pause / Menu** | Sistem menu lengkap dengan main menu & pause manager |
-| 🌐 **Multi-Bahasa** | Dukungan penuh Bahasa Indonesia & English |
+| 🔦 **Lantern System** | The only source of light — its fuel is limited and can run out |
+| 🎒 **Inventory System** | Collect keys, oil, and other essential items |
+| 👻 **Ghost AI** | An entity that hunts the player and triggers jumpscares when it catches them |
+| 🚪 **Puzzles & Door Interactions** | Basement, escape doors, and dynamic object interactions |
+| 💾 **Save / Pause / Menu** | Full menu system with main menu and pause manager |
+| 🌐 **Multi-Language** | Full support for Indonesian & English |
 
 ---
 
-## 🗂️ Struktur Proyek
+## 🗂️ Project Structure
 
 ```
 GameDev/
 ├── Assets/
-│   ├── GameAssets/Code/       # Script inti gameplay (player, hantu, inventory, UI, localization)
-│   ├── Scripts/               # Script tambahan/bridge (lantern auto-equip, integrasi UHFPS, dsb.)
+│   ├── GameAssets/Code/       # Core gameplay scripts (player, ghost, inventory, UI, localization)
+│   ├── Scripts/               # Additional/bridge scripts (lantern auto-equip, UHFPS integration, etc.)
 │   ├── UHFPS/                 # Ultimate Horror FPS System (asset store)
 │   ├── AdvancedMobileHorror/  # Advanced Mobile Horror FPS System (asset store)
-│   ├── Hantu/                 # Model & animasi karakter hantu
+│   ├── Hantu/                 # Ghost character model & animations
 │   ├── modular-dungeon/       # Modular dungeon/mansion tileset
-│   ├── Cemetery Kit V1.25/    # Asset kuburan
-│   ├── Dark UI/               # UI kit tema gelap
-│   ├── MainMenuAsset/         # Aset main menu
-│   ├── Scenes/                # Scene: MainMenu, GameKEL9, Coba (testing)
-│   └── ...                    # Asset pendukung lain (audio, materials, dsb.)
+│   ├── Cemetery Kit V1.25/    # Cemetery asset pack
+│   ├── Dark UI/               # Dark-themed UI kit
+│   ├── MainMenuAsset/         # Main menu assets
+│   ├── Scenes/                # Scenes: MainMenu, GameKEL9, Coba (testing)
+│   └── ...                    # Other supporting assets (audio, materials, etc.)
 ├── Packages/                  # Unity Package Manager dependencies
-└── ProjectSettings/           # Konfigurasi project Unity
+└── ProjectSettings/           # Unity project configuration
 ```
 
 ---
 
-## 🧩 Script Utama
+## 🧩 Core Scripts
 
 <div align="center">
 
-| Script | Fungsi |
+| Script | Function |
 |:---|:---|
-| `FirstPersonController.cs` / `HeroController.cs` | Kontrol pergerakan & kamera pemain |
-| `HantuMove.cs` / `HantuJumpscare.cs` | AI pergerakan hantu & trigger jumpscare |
-| `Inventory.cs` / `InventorySystem.cs` | Sistem penyimpanan item pemain |
-| `KeyPickup.cs` / `PetrolOilPickup.cs` / `PickupItem.cs` | Pengambilan item di dunia game |
-| `LanternContoller.cs` / `LanternToggle.cs` / `LanternOilWarning.cs` | Sistem lentera (cahaya utama & bahan bakar) |
-| `BasementDoor.cs` / `EscapeDoor.cs` / `Door2BlackInteraction.cs` | Interaksi pintu & transisi scene |
-| `PauseManager.cs` / `PlayButton.cs` / `ExitButton.cs` | Sistem menu & kontrol game |
-| `LanguageManager.cs` / `LocalizedText.cs` / `LanguageDropdown.cs` | Sistem localization EN/ID |
-| `TutorialManager.cs` | Panduan/tutorial untuk pemain baru |
+| `FirstPersonController.cs` / `HeroController.cs` | Player movement & camera control |
+| `HantuMove.cs` / `HantuJumpscare.cs` | Ghost movement AI & jumpscare trigger |
+| `Inventory.cs` / `InventorySystem.cs` | Player item storage system |
+| `KeyPickup.cs` / `PetrolOilPickup.cs` / `PickupItem.cs` | Item pickup in the game world |
+| `LanternContoller.cs` / `LanternToggle.cs` / `LanternOilWarning.cs` | Lantern system (main light source & fuel) |
+| `BasementDoor.cs` / `EscapeDoor.cs` / `Door2BlackInteraction.cs` | Door interactions & scene transitions |
+| `PauseManager.cs` / `PlayButton.cs` / `ExitButton.cs` | Menu system & game controls |
+| `LanguageManager.cs` / `LocalizedText.cs` / `LanguageDropdown.cs` | EN/ID localization system |
+| `TutorialManager.cs` | Guide/tutorial for new players |
 
 </div>
 
@@ -92,33 +92,33 @@ GameDev/
 </div>
 
 - **Engine:** Unity 2022.3.62f2 · Universal Render Pipeline (URP) 14.0.12
-- **Package pendukung:** Cinemachine · ProBuilder · TextMeshPro · AI Navigation (NavMesh) · Input System · Timeline
-- **Asset toolkit horror:** UHFPS (Ultimate Horror FPS System) · Advanced Mobile Horror FPS System
+- **Supporting packages:** Cinemachine · ProBuilder · TextMeshPro · AI Navigation (NavMesh) · Input System · Timeline
+- **Horror asset toolkit:** UHFPS (Ultimate Horror FPS System) · Advanced Mobile Horror FPS System
 
 ---
 
-## 🚀 Cara Menjalankan
+## 🚀 Getting Started
 
 ```bash
-# 1. Clone repository ini
+# 1. Clone this repository
 git clone https://github.com/Aclekk/GameDev.git
 
-# 2. Buka folder GameDev via Unity Hub
-#    Gunakan editor versi 2022.3.62f2 (atau 2022.3 LTS terdekat)
+# 2. Open the GameDev folder via Unity Hub
+#    Use editor version 2022.3.62f2 (or the closest 2022.3 LTS release)
 
-# 3. Buka scene entry point
+# 3. Open the entry-point scene
 Assets/Scenes/MainMenu.unity
 
-# 4. Tekan ▶️ Play — dan berdoa lampunya nggak mati duluan
+# 4. Hit ▶️ Play — and pray your light doesn't die first
 ```
 
 ---
 
-## 📝 Catatan
+## 📝 Notes
 
-- 🎬 Scene utama gameplay: `GameKEL9.unity`
-- 🧪 Scene `Coba.unity` digunakan untuk keperluan testing/eksperimen
-- 🌐 Dokumentasi localization lengkap ada di `LOCALIZATION_FILES.md` (folder `Assets/GameAssets/Code/`)
+- 🎬 Main gameplay scene: `GameKEL9.unity`
+- 🧪 The `Coba.unity` scene is used for testing/experimentation purposes
+- 🌐 Full localization documentation is available in `LOCALIZATION_FILES.md` (inside `Assets/GameAssets/Code/`)
 
 <div align="center">
 
